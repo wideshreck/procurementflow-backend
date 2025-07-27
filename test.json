@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "version": "2.0.0",
+    "generatedAt": "2025-07-26T03:00:00Z",
+    "sourceSystem": "ProcurementFlow-API",
+    "schemaType": "IndirectPurchaseRequest"
+  },
+  "purchaseRequest": {
+    "uuid-API": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "id-API": "PR-2025-IND-000124",
+    "type-API": "indirect_purchase",
+    "title-AI": "Tasarım Ekibi için Yeni Dizüstü Bilgisayar ve Monitör Alımı",
+    "description-AI": "Büyüyen tasarım ekibinin ihtiyaçlarını karşılamak üzere yüksek performanslı 10 adet dizüstü bilgisayar ve 10 adet 4K monitör alımı.",
+    "status-API": "PENDING_APPROVAL",
+    "priority-AI": "High",
+    "requestedAt-API": "2025-07-24T14:30:00Z",
+    "neededBy-AI": "2025-08-15T00:00:00Z",
+    "costSummary-AI": {
+      "subTotal": 850000.00,
+      "totalTax": 153000.00,
+      "grandTotal": 1003000.00,
+      "currency": "TRY"
+    },
+    "requester-API": {
+      "employeeId": "E-21987",
+      "fullName": "Zeynep Kaya",
+      "email": "zeynep.kaya@sirket.com",
+      "department": "Bilgi Teknolojileri",
+      "location": "Ankara Teknopark Ofisi"
+    },
+    "delivery-AI": {
+      "addressId": "ANK-TEK-IT-DEPO",
+      "contactPerson": "Zeynep Kaya",
+      "contactPhone": "+90 312 555 00 11",
+      "instructions": "Ürünler IT departmanı deposuna, orijinal kutularında ve hasarsız olarak teslim edilmelidir."
+    },
+    "items":{
+        "uuid-API": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        "itemId-API": "PR-2025-IND-000124-001",
+        "type-AI": "good",
+        "category-AI": "IT Ekipmanları",
+        "subcategory-AI": "Dizüstü Bilgisayar",
+        "description-AI": "Model X Pro 16-inch Laptop (M3 Max, 32GB RAM, 1TB SSD)",
+        "quantity-AI": 10,
+        "unitOfMeasure-AI": "piece",
+        "unitPrice-AI": {
+          "amount": 60000.00,
+          "currency": "TRY"
+        },
+        "taxRate-AI?": 0.18
+    },
+    "budget-API": {
+      "budgetCode": "BUD-2025-IT-CAPEX-004",
+      "owner": {
+        "employeeId": "E-09876",
+        "fullName": "Barış Çetin",
+        "email": "baris.cetin@sirket.com"
+      },
+      "approvalStatus": "Approved"
+    },
+    "approvals-API": {
+      "currentStatus": "Pending",
+      "escalationLevel": 2,
+      "approvalSteps": [
+        {
+          "step": 1,
+          "name": "IT Direktörü Onayı",
+          "status": "APPROVED",
+          "approvedAt": "2025-07-25T11:00:00Z",
+          "approvers": [
+            {
+              "employeeId": "E-09876",
+              "fullName": "Barış Çetin",
+              "email": "baris.cetin@sirket.com",
+              "comment": "Ekipman ihtiyacı tarafımca onaylanmıştır."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "name": "Finans Direktörlüğü Onayı",
+          "status": "PENDING_APPROVAL",
+          "approvedAt": null,
+          "approvalRule": "ANY",
+          "approvers": [
+            {
+              "employeeId": "E-01122",
+              "fullName": "Fatma Öztürk",
+              "email": "fatma.ozturk@sirket.com",
+              "comment": null
+            },
+            {
+              "employeeId": "E-03344",
+              "fullName": "Kaan Yılmaz",
+              "email": "kaan.yilmaz@sirket.com",
+              "comment": null
+            }
+          ]
+        }
+      ]
+    },
+    "auditTrail-API": [
+      {
+        "event": "CREATED",
+        "performedBy": "zeynep.kaya@sirket.com",
+        "timestamp": "2025-07-24T14:30:00Z",
+        "description": "Talep oluşturuldu."
+      },
+      {
+        "event": "ITEM_ADDED",
+        "performedBy": "zeynep.kaya@sirket.com",
+        "timestamp": "2025-07-24T14:32:00Z",
+        "description": "Kalem eklendi: Model X Pro 16-inch Laptop (10 adet)"
+      },
+      {
+        "event": "ITEM_ADDED",
+        "performedBy": "zeynep.kaya@sirket.com",
+        "timestamp": "2025-07-24T14:33:00Z",
+        "description": "Kalem eklendi: ProDisplay 27-inch 4K UHD Monitor (10 adet)"
+      },
+      {
+        "event": "SUBMITTED_FOR_APPROVAL",
+        "performedBy": "zeynep.kaya@sirket.com",
+        "timestamp": "2025-07-24T14:35:00Z",
+        "description": "Talep onaya gönderildi."
+      },
+      {
+        "event": "APPROVAL_STEP_COMPLETED",
+        "performedBy": "baris.cetin@sirket.com",
+        "timestamp": "2025-07-25T11:00:00Z",
+        "description": "1. Adım (IT Direktörü Onayı) tamamlandı."
+      }
+    ]
+  }
+}
