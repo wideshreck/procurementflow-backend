@@ -39,8 +39,9 @@ app = FastAPI(
 )
 
 origins = [
-    "https://procurementflow.onrender.com/", # Kendi frontend adresinizi buraya yazın
+    "216.24.57.251", # Kendi frontend adresinizi buraya yazın
     "http://localhost:5173", # Geliştirme için
+    "*"
 ]
 
 app.add_middleware(
