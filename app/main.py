@@ -39,7 +39,7 @@ app = FastAPI(
 )
 
 origins = [
-    "https://your-frontend-domain.com", # Kendi frontend adresinizi buraya yazın
+    "https://procurementflow.onrender.com/", # Kendi frontend adresinizi buraya yazın
     "http://localhost:5173", # Geliştirme için
 ]
 
