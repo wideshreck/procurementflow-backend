@@ -3,6 +3,7 @@
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
@@ -35,6 +36,19 @@ app = FastAPI(
     description="A professional, versioned FastAPI application structure.",
     version="1.0.0",
     lifespan=lifespan
+)
+
+origins = [
+    "https://your-frontend-domain.com", # Kendi frontend adresinizi buraya yazın
+    "http://localhost:5173", # Geliştirme için
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins, # Belirtilen adreslerden gelen isteklere izin ver
+    allow_credentials=True,
+    allow_methods=["*"], # Tüm metodlara (GET, POST, vb.) izin ver
+    allow_headers=["*"], # Tüm header'lara izin ver
 )
 
 # --- Global Exception Handler ---
