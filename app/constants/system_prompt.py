@@ -207,7 +207,7 @@ Sonuçlarını **aşağıdaki JSON formatında** ver:
         "amount": float,  // Birim fiyat, sadece sayı (örnek: 60000.0)
         "currency": "TRY"
     },
-    "total_cost": {
+    "totalCost": {
         "amount": float,  // Toplam maliyet (birim fiyat x adet)
         "currency": "TRY"
     },

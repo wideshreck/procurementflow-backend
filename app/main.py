@@ -8,15 +8,14 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.logging_config import setup_logging # Updated import
+from app.routes import chat, estimate_price
 from app.services.supabase import (
     connect_to_supabase,
     close_supabase_connection
 )
 # Import the router from its new location
 from app.routes.utility import router as utility_router
-from app.routes.chat import router as chat_router
-from app.routes.budget import router as budget_router
-from app.routes import chat, budget, items 
+
 
 
 # Configure logging at the very beginning
@@ -72,18 +71,5 @@ app.include_router(
     tags=["Utilities - V1"]
 )
 
-app.include_router(
-    chat_router,
-    prefix="/api/v1",
-    tags=["AI Chat - V1"]
-)
-
-app.include_router(
-    budget_router,
-    prefix="/api/v1",
-    tags=["AI Budget - V1"]
-)
 app.include_router(chat.router, prefix=f"{settings.API_V1_STR}/chat", tags=["Chat"])
-app.include_router(budget.router, prefix=f"{settings.API_V1_STR}/budget", tags=["Budget"])
-# YENİ EKlenen router'ı burada uygulamaya dahil ediyoruz
-app.include_router(items.router, prefix=f"{settings.API_V1_STR}/items", tags=["Items"])
+app.include_router(estimate_price.router, prefix=f"{settings.API_V1_STR}/estimatePrice",tags=["Price"])

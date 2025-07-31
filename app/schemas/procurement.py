@@ -1,10 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-class ItemProperty(BaseModel):
-    """Represents a single property of an item, like 'RAM' or 'Color'."""
-    name: str = Field(..., description="The name of the property (e.g., 'RAM', 'Screen Size').")
-    value: str = Field(..., description="The value of the property (e.g., '16GB', '15-inch').")
 
 class PurchaseRequestItem(BaseModel):
     """Defines a single item or service within a purchase request."""
@@ -15,7 +11,7 @@ class PurchaseRequestItem(BaseModel):
     quantity: int = Field(..., gt=0, description="The quantity of the item, must be greater than 0.")
     unitOfMeasure: str = Field(..., description="The unit of measure for the quantity (e.g., 'adet', 'lisans', 'saat').")
     notes: Optional[str] = Field(None, description="Additional notes or specifications for the item.")
-    properties: Optional[List[ItemProperty]] = Field(None, description="A list of specific properties for the item.")
+    properties: Optional[List] = Field(None, description="A list of specific properties for the item.")
     userInputUnitPrice: Optional[float] = Field(None, description="Unit price for the item, manually entered by the user.", gt=0)
 
 class PurchaseRequest(BaseModel):
@@ -25,3 +21,17 @@ class PurchaseRequest(BaseModel):
     priority: str = Field("Medium", description="The priority of the request (e.g., 'Low', 'Medium', 'High').")
     neededBy: Optional[str] = Field(None, description="The date by which the items/services are needed (YYYY-MM-DD).")
     items: List[PurchaseRequestItem] = Field(..., description="A list of items or services included in the request.")
+
+class PriceOfSingleItem(BaseModel):
+    amount: float
+    currency: str
+
+class PriceOfTotal(BaseModel):
+    amount: float
+    currency: str
+
+class PriceEstimationResponse(BaseModel):
+    unitPrice: PriceOfSingleItem
+    totalCost: PriceOfTotal
+    justification: str
+    notes: Optional[List]
