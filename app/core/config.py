@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4.1"
     APP_NAME: str = "FastAPI App"
     OPENAI_API_KEY: str
+    API_V1_STR: str
 
     # Configure Pydantic to load from a .env file
     model_config = SettingsConfigDict(

@@ -1,43 +1,41 @@
-# procurementflow-backend/app/schemas/budget.py
-
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from .procurement import PurchaseRequest # Ana talep şemasını import ediyoruz
 
-class PurchaseRequestItem(BaseModel):
-    """Bir satınalma talebindeki tek bir kalemi tanımlar."""
-    type: str = Field(..., description="Kalemin türü (mal, hizmet, danışmanlık).", examples=["good", "service", "consultancy"])
-    category: str
-    subcategory: str
-    description: str
-    quantity: int
-    unitOfMeasure: str = Field(..., description="Ölçü birimi.", examples=["adet", "kg", "paket"])
-    notes: Optional[str] = None
-
-class PurchaseRequest(BaseModel):
-    """AI tarafından oluşturulan satınalma talebinin detaylarını içerir."""
-    title: str
-    description: str
-    priority: str = Field(..., description="Talebin önceliği.", examples=["Low", "Medium", "High"])
-    neededBy: str = Field(..., description="Talep edilen son teslim tarihi.")
-    item: PurchaseRequestItem
+# --- Request Models ---
 
 class BudgetRequest(BaseModel):
-    """Bütçe endpoint'i için istek modeli."""
-    purchaseRequest: PurchaseRequest
+    """
+    Defines the request body sent to the main budget endpoint.
+    It contains the entire purchase request object.
+    """
+    purchaseRequest: PurchaseRequest = Field(..., description="The complete purchase request object to be processed.")
 
-class UnitPrice(BaseModel):
-    """Birim fiyat modelini tanımlar."""
+
+# --- Response Models ---
+
+class PriceDetail(BaseModel):
+    """
+    Represents a monetary amount with its currency.
+    """
     amount: float
     currency: str = "TRY"
 
-class TotalCost(BaseModel):
-    """Toplam maliyet modelini tanımlar."""
-    amount: float
-    currency: str = "TRY"
+class BudgetItem(BaseModel):
+    """
+    Defines the structure for a single item within the final budget response.
+    """
+    description: str = Field(..., description="The description of the item.")
+    quantity: int = Field(..., description="The quantity of the item.")
+    unitOfMeasure: str = Field(..., description="The unit of measure for the item.")
+    unitPrice: PriceDetail = Field(..., description="The final unit price (either user-inputted or AI-estimated).")
+    total_cost: PriceDetail = Field(..., description="The total calculated cost for this item line.")
+    justification: str = Field(..., description="The justification for the price (e.g., 'User-provided' or 'AI-estimated').")
 
 class BudgetResponse(BaseModel):
-    """Bütçe endpoint'i için yanıt modeli."""
-    unitPrice: UnitPrice
-    total_cost: TotalCost
-    justification: str
-    notes: List[str]
+    """
+    Defines the final response structure from the budget finalization endpoint.
+    """
+    title: str = Field(..., description="The title of the purchase request.")
+    total_estimated_cost: PriceDetail = Field(..., description="The grand total estimated cost for the entire request.")
+    items: List[BudgetItem] = Field(..., description="A detailed list of items with their final costs and justifications.")

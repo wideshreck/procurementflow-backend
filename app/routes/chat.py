@@ -1,53 +1,29 @@
-# app/routes/chat.py
-
 import logging
-import json
-from fastapi import APIRouter, HTTPException, status
-
-from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.openai_service import process_chat_interaction
-from openai import APIError
+from fastapi import APIRouter, HTTPException
+from app.schemas.chat import ChatRequest, APIChatResponse 
+from app.services.chat_service import get_chat_response
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post(
-    "/chat",
-    response_model=ChatResponse,
-    summary="Interact with the AI Chatbot"
-)
+@router.post("/", response_model=APIChatResponse, summary="Handle Chat Interaction")
 async def handle_chat(request: ChatRequest):
+    """
+    Handles the main chat interaction with the user.
+    Receives a user message and returns a structured response from the AI model.
+    """
     try:
-        model_response_str = process_chat_interaction(
+        # get_chat_response çağrısından 'is_done' parametresini kaldırıyoruz.
+        # Bu değişiklik hatayı çözecektir.
+        model_response_data = get_chat_response(
             session_id=request.session_id,
-            user_message=request.user_message,
-            is_done=request.is_done
+            user_message=request.user_message
         )
         
-        # The service returns a string, we need to parse it into a dict
-        # to fit the Pydantic response model.
-        model_response_json = json.loads(model_response_str)
-
-        return ChatResponse(
+        return APIChatResponse(
             session_id=request.session_id,
-            model_response=model_response_json
+            model_response=model_response_data
         )
-
-    except APIError as e:
-        logger.error(f"OpenAI API Error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"The AI service is currently unavailable: {e.body.get('message')}"
-        )
-    except RuntimeError as e:
-        logger.critical(f"Runtime Error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-    except json.JSONDecodeError:
-        logger.error("Failed to parse JSON response from OpenAI model.")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="The AI model returned an invalid JSON format."
-        )
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred in the chat service.")

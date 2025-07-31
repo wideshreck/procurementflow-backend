@@ -1,26 +1,20 @@
-# app/schemas/chat.py
-
 from pydantic import BaseModel, Field
-from typing import Dict, Any
+from typing import Optional
+from .procurement import PurchaseRequest
 
 class ChatRequest(BaseModel):
     """Defines the request model for the chat endpoint."""
-    session_id: str = Field(
-        ...,
-        description="A unique identifier for the conversation session.",
-        examples=["session-12345"]
-    )
-    user_message: str = Field(
-        ...,
-        description="The message from the user.",
-        examples=["Can you give me three ideas for a new startup?"]
-    )
-    is_done: bool = Field(
-        default=False,
-        description="Set to true to end the conversation and clear its history."
-    )
+    session_id: str = Field(..., description="A unique identifier for the conversation session.")
+    user_message: str = Field(..., description="The message from the user.")
 
-class ChatResponse(BaseModel):
-    """Defines the response model for the chat endpoint."""
+class InternalChatResponse(BaseModel):
+    """Defines the actual content of the model's response."""
+    type: str
+    message: Optional[str] = None
+    purchaseRequest: Optional[PurchaseRequest] = None
+    is_done: bool
+
+class APIChatResponse(BaseModel):
+    """Defines the final API response structure for the chat endpoint."""
     session_id: str
-    model_response: Dict[str, Any]
+    model_response: InternalChatResponse

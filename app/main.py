@@ -16,6 +16,8 @@ from app.services.supabase import (
 from app.routes.utility import router as utility_router
 from app.routes.chat import router as chat_router
 from app.routes.budget import router as budget_router
+from app.routes import chat, budget, items 
+
 
 # Configure logging at the very beginning
 setup_logging()
@@ -81,3 +83,7 @@ app.include_router(
     prefix="/api/v1",
     tags=["AI Budget - V1"]
 )
+app.include_router(chat.router, prefix=f"{settings.API_V1_STR}/chat", tags=["Chat"])
+app.include_router(budget.router, prefix=f"{settings.API_V1_STR}/budget", tags=["Budget"])
+# YENİ EKlenen router'ı burada uygulamaya dahil ediyoruz
+app.include_router(items.router, prefix=f"{settings.API_V1_STR}/items", tags=["Items"])
