@@ -31,6 +31,48 @@ export class Phase3Service {
         }
       }
 
+      // Check if user selected a predefined profile
+      if (message && message.startsWith('PHASE_THREE_PROFILE_SELECTED:')) {
+        try {
+          const selectedProfile = JSON.parse(message.replace('PHASE_THREE_PROFILE_SELECTED:', '').trim());
+          this.logger.log('User selected a predefined profile, moving to Phase 4');
+          
+          // Ensure all technical specifications have requirement_level set to 'Zorunlu'
+          if (selectedProfile.technical_specifications && Array.isArray(selectedProfile.technical_specifications)) {
+            selectedProfile.technical_specifications = selectedProfile.technical_specifications.map((spec: any) => ({
+              ...spec,
+              requirement_level: spec.requirement_level || 'Zorunlu'
+            }));
+          }
+          
+          // Merge with existing conversation data
+          const existingData = conversation.collectedData as any || {};
+          const phase1Data = existingData?.phase1 || {};
+          
+          const mergedData = {
+            ...phase1Data,
+            ...existingData,
+            technical_specifications: selectedProfile.technical_specifications || [],
+            selected_profile: selectedProfile.suggestion_name || selectedProfile.item_name
+          };
+          
+          // Update conversation with selected profile data
+          await this.prisma.conversation.update({
+            where: { id: conversation.id },
+            data: {
+              collectedData: mergedData,
+            },
+          });
+          
+          return {
+            MODE: ChatbotMode.PHASE_THREE_DONE,
+            COLLECTED_DATA: mergedData,
+          } as ChatbotResponse;
+        } catch (e) {
+          this.logger.error('Error parsing PHASE_THREE_PROFILE_SELECTED message', e);
+        }
+      }
+
       // Check if this is a manual technical specifications submission
       if (message.startsWith('Teknik Özellikler:') || 
           message.startsWith('Teknik Özellikler Onaylandı:') || 
