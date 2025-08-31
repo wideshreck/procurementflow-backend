@@ -13,6 +13,7 @@ import fastifyCors from '@fastify/cors';
 import { fastify } from 'fastify';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyCookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
 
 async function bootstrap() {
   patchNestJsSwagger();
@@ -47,6 +48,8 @@ async function bootstrap() {
     secret: process.env.COOKIE_SECRET || 'a-secure-secret-for-cookie-signing',
   });
 
+  await app.register(multipart);
+
   // Empty body handler for specific endpoints
   await app.register(async function (fastify) {
     fastify.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
@@ -72,7 +75,8 @@ async function bootstrap() {
       'Accept', 
       'Authorization', 
       'X-CSRF-Token',
-      'X-Csrf-Token'
+      'X-Csrf-Token',
+      'X-No-Refresh'
     ],
     maxAge: 86400, // 24 hours
   });

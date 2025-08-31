@@ -1,19 +1,6 @@
 import { IsString, IsNotEmpty, IsOptional, IsArray, ValidateNested, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
-
-class AuthorizedPersonDto {
-  @IsString()
-  @IsNotEmpty()
-  name: string;
-
-  @IsString()
-  @IsNotEmpty()
-  email: string;
-
-  @IsString()
-  @IsNotEmpty()
-  phone: string;
-}
+import { AuthorizedPersonDto } from './authorized-person.dto';
 
 class TaxInfoDto {
     @IsString()

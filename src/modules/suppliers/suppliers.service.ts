@@ -52,14 +52,34 @@ export class SuppliersService {
   async update(id: string, updateSupplierInput: UpdateSupplierInput) {
     const { authorizedPersons, taxInfo, ...supplierData } = updateSupplierInput;
 
+    const existingSupplier = await this.prisma.supplier.findUnique({
+      where: { id },
+      include: { authorizedPersons: true },
+    });
+
+    if (!existingSupplier) {
+      throw new NotFoundException(`Supplier with ID ${id} not found`);
+    }
+
+    const existingPersonIds = existingSupplier.authorizedPersons.map((p) => p.id);
+    const incomingPersonIds = authorizedPersons?.map((p) => p.id).filter(Boolean) || [];
+
+    const personIdsToDelete = existingPersonIds.filter((personId) => !incomingPersonIds.includes(personId));
+
     return this.prisma.supplier.update({
       where: { id },
       data: {
         ...supplierData,
         taxInfo: taxInfo as any,
         authorizedPersons: {
-          deleteMany: {}, // Clear existing persons
-          create: authorizedPersons, // Create new ones
+          deleteMany: {
+            id: { in: personIdsToDelete },
+          },
+          upsert: authorizedPersons?.map((person) => ({
+            where: { id: person.id || '' },
+            update: { name: person.name, email: person.email, phone: person.phone },
+            create: { name: person.name, email: person.email, phone: person.phone },
+          })),
         },
       },
       include: {
