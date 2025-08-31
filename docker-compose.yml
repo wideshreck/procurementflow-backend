@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-supersecretpassword} # Geliştirme için varsayılan değer
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_DB: ${DB_NAME:-app}
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+  api:
+    build: .
+    environment:
+      NODE_ENV: development
+      # .env dosyasından okunacak değişkenler
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      PORT: ${PORT:-3000}
+    depends_on:
+      - db
+    ports:
+      # Lokal portu .env'den al, varsayılan 3000 yap
+      - "${PORT:-3000}:3000"
+
+volumes:
+  dbdata: {}

@@ -1,0 +1,24 @@
+# Node.js dependencies
+node_modules
+npm-debug.log
+
+# Docker specific files
+Dockerfile
+.dockerignore
+
+# Git and version control
+.git
+.gitignore
+
+# Documentation folder (generated)
+docs
+
+# Test, coverage and IDE files
+coverage
+test
+.vscode
+.idea
+
+# Environment files with secrets
+.env
+.env.*

@@ -1,0 +1,47 @@
+name: Publish API Docs
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          # Bu DATABASE_URL, build adımı için geçici ve zararsız bir değerdir.
+          # Gerçek veritabanına bağlanmasına gerek yoktur.
+          DATABASE_URL: "postgresql://user:password@localhost:5432/db?schema=public"
+
+      - name: Build app (ensures decorators etc. compile)
+        run: npm run build
+
+      - name: Export OpenAPI JSON
+        run: npm run openapi:json
+        env:
+          # GitHub Secrets'tan güvenli bir şekilde okunacak değerler
+          SWAGGER_ENABLED: "true"
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DUMMY }} # Gerçek veritabanına bağlanmıyor
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          force_orphan: true

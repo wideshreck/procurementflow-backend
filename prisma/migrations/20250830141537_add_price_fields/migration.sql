@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "public"."ProcurementRequest" ADD COLUMN     "currency" TEXT NOT NULL DEFAULT 'TRY',
+ADD COLUMN     "totalPrice" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "unitPrice" DOUBLE PRECISION NOT NULL DEFAULT 0;
