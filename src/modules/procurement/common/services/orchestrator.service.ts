@@ -158,10 +158,19 @@ export class OrchestratorService {
 
       await this.saveMessage(conversation.id, MessageRole.ASSISTANT, response);
 
+      // Handle conversation completion: create new conversation ID for next interaction
+      let finalConversationId = conversation.id;
+      if (response.MODE === ChatbotMode.PHASE_FOUR_DONE) {
+        // Create a new conversation for the next interaction when current one is completed
+        const newConversation = await this.createNewConversation(userId);
+        finalConversationId = newConversation.id;
+        this.logger.log(`Conversation completed, new conversation ready: ${finalConversationId}`);
+      }
+
       // Ensure conversationId is always included in response
       const responseWithId = {
         ...response,
-        conversationId: conversation.id,
+        conversationId: finalConversationId,
       };
 
       return responseWithId;
@@ -176,33 +185,65 @@ export class OrchestratorService {
   }
 
   /**
-   * Clean conversation management: Each conversation is isolated and unique.
-   * New conversations are always created unless a specific ID is provided.
+   * Smart conversation management: Reuse active conversations, create new only when needed.
+   * New conversations are only created when:
+   * 1. No conversationId provided and no active conversation exists
+   * 2. Provided conversationId is completed, cancelled, or doesn't exist
+   * 3. Conversation belongs to different user
    */
   private async findOrCreateActiveConversation(
     userId: string,
     conversationId?: string,
   ): Promise<Conversation> {
-    // If conversationId provided, try to find it and validate it's still active
+    // If conversationId provided, try to find it and validate it
     if (conversationId) {
       const conversation = await this.prisma.conversation.findUnique({
         where: { id: conversationId },
       });
       
-      // Only return existing conversation if it belongs to user and is still active
+      // Return existing conversation if it belongs to user and is still active
       if (conversation && 
           conversation.userId === userId && 
           conversation.status === ConversationStatus.ACTIVE) {
+        this.logger.log(`Reusing active conversation: ${conversationId}`);
         return conversation;
       }
       
-      // If conversation exists but completed/cancelled, log it and create new one
+      // If conversation exists but completed/cancelled, create new one
       if (conversation && conversation.userId === userId) {
         this.logger.log(`Conversation ${conversationId} is ${conversation.status}, creating new one`);
+      } else if (conversation) {
+        this.logger.log(`Conversation ${conversationId} belongs to different user, creating new one`);
+      } else {
+        this.logger.log(`Conversation ${conversationId} not found, creating new one`);
       }
+      
+      // Create new conversation since the provided one is not usable
+      return await this.createNewConversation(userId);
     }
 
-    // Always create a new conversation for clean isolation
+    // No conversationId provided, check if user has an active conversation
+    const existingActiveConversation = await this.prisma.conversation.findFirst({
+      where: { 
+        userId, 
+        status: ConversationStatus.ACTIVE 
+      },
+    });
+
+    if (existingActiveConversation) {
+      this.logger.log(`Found existing active conversation: ${existingActiveConversation.id}`);
+      return existingActiveConversation;
+    }
+
+    // No active conversation found, create new one
+    return await this.createNewConversation(userId);
+  }
+
+  /**
+   * Creates a new conversation for the user.
+   * Cancels any existing active conversations to prevent conflicts.
+   */
+  private async createNewConversation(userId: string): Promise<Conversation> {
     // Close any other active conversations for this user to prevent conflicts
     await this.prisma.conversation.updateMany({
       where: { 
@@ -331,8 +372,8 @@ export class OrchestratorService {
   }
 
   /**
-   * Cancels the active conversation for a user.
-   * @returns The cancelled conversation ID if found.
+   * Cancels the active conversation for a user and creates a new one.
+   * @returns The new conversation ID created after cancellation.
    */
   async cancelConversation(userId: string): Promise<string | undefined> {
     const activeConversation = await this.prisma.conversation.findFirst({
@@ -350,9 +391,16 @@ export class OrchestratorService {
       await this.deleteConversationHistory(activeConversation.id);
 
       this.logger.log(`Cancelled conversation ${activeConversation.id} for user ${userId}`);
-      return activeConversation.id;
+      
+      // Create new conversation for next interaction
+      const newConversation = await this.createNewConversation(userId);
+      this.logger.log(`New conversation created after cancellation: ${newConversation.id}`);
+      return newConversation.id;
     }
     
-    return undefined;
+    // No active conversation found, create a new one anyway
+    const newConversation = await this.createNewConversation(userId);
+    this.logger.log(`No active conversation found, created new one: ${newConversation.id}`);
+    return newConversation.id;
   }
 }
