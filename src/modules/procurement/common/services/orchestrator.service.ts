@@ -278,30 +278,61 @@ export class OrchestratorService {
     nextPhase: ProcurementPhase,
     response: ChatbotResponse,
   ): Promise<Conversation> {
-    const newCollectedData = conversation.collectedData
+    const currentData = conversation.collectedData
       ? { ...(conversation.collectedData as object) }
       : {};
+
+    let newCollectedData = currentData;
 
     // Update collectedData on phase completion
     if ('COLLECTED_DATA' in response) {
       if (response.MODE === ChatbotMode.PHASE_ONE_DONE) {
+        // For Phase 1, merge data directly
+        newCollectedData = { ...currentData, ...response.COLLECTED_DATA };
         newCollectedData['phase1'] = response.COLLECTED_DATA;
       } else if (response.MODE === ChatbotMode.PHASE_TWO_DONE) {
+        // For Phase 2 done, preserve all previous data
+        newCollectedData = { ...currentData, ...response.COLLECTED_DATA };
         newCollectedData['phase2'] = response.COLLECTED_DATA;
       } else if (response.MODE === ChatbotMode.PHASE_THREE_DONE) {
+        // For Phase 3, merge technical specifications
+        newCollectedData = { ...currentData, ...response.COLLECTED_DATA };
         newCollectedData['phase3'] = response.COLLECTED_DATA;
       } else if (response.MODE === ChatbotMode.PHASE_FOUR_DONE) {
-        newCollectedData['phase4'] = response.COLLECTED_DATA;
+        // For Phase 4, ensure all data is preserved
+        // The response.COLLECTED_DATA should already contain all merged data from Phase 4 service
+        newCollectedData = response.COLLECTED_DATA;
       }
     }
 
-    // Handle PHASE_TWO_CATALOG_MATCH separately
-    if (response.MODE === ChatbotMode.PHASE_TWO_CATALOG_MATCH) {
+    // Handle PHASE_TWO_CATALOG_MATCH and PHASE_TWO_SELECTED
+    if (response.MODE === ChatbotMode.PHASE_TWO_CATALOG_MATCH || 
+        response.MODE === ChatbotMode.PHASE_TWO_SELECTED) {
       if ('COLLECTED_DATA' in response) {
-        newCollectedData['phase2'] = response.COLLECTED_DATA;
+        // Merge catalog data with existing data
+        const collectedData = response.COLLECTED_DATA as Record<string, any>;
+        newCollectedData = { ...currentData, ...collectedData };
+        newCollectedData['phase2'] = collectedData;
+        
+        // Preserve technical specifications if they exist and ensure requirement_level is 'Zorunlu'
+        if (collectedData.technical_specifications) {
+          newCollectedData['technical_specifications'] = collectedData.technical_specifications.map((spec: any) => ({
+            ...spec,
+            requirement_level: 'Zorunlu'
+          }));
+        }
       }
       if ('SELECTED_CATALOG_ITEM' in response) {
-        newCollectedData['selectedCatalogItem'] = response.SELECTED_CATALOG_ITEM;
+        const selectedItem = response.SELECTED_CATALOG_ITEM as Record<string, any>;
+        newCollectedData['selectedCatalogItem'] = selectedItem;
+        
+        // Extract technical specifications from selected item and ensure requirement_level is 'Zorunlu'
+        if (selectedItem.technical_specifications) {
+          newCollectedData['technical_specifications'] = selectedItem.technical_specifications.map((spec: any) => ({
+            ...spec,
+            requirement_level: 'Zorunlu'
+          }));
+        }
       }
     }
 

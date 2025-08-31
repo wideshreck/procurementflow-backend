@@ -72,7 +72,8 @@ async function bootstrap() {
       'Accept', 
       'Authorization', 
       'X-CSRF-Token',
-      'X-Csrf-Token'
+      'X-Csrf-Token',
+      'x-no-refresh'
     ],
     maxAge: 86400, // 24 hours
   });

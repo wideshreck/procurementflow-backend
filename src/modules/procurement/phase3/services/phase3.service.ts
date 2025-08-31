@@ -218,12 +218,14 @@ Phase 1 Data:\n${JSON.stringify(
    * Create fallback technical specifications when AI fails to generate them
    */
   private createFallbackTechnicalSpecs(phase1Data: any) {
-    const category = phase1Data.category?.toLowerCase() || '';
-    const subcategory = phase1Data.subcategory?.toLowerCase() || '';
+    const categoryId = phase1Data.category_id || '';
+    const itemTitle = phase1Data.item_title?.toLowerCase() || '';
     
-    // IT/Computer related specifications
-    if (category.includes('it') || category.includes('bilgisayar') || 
-        subcategory.includes('laptop') || subcategory.includes('dizüstü')) {
+    // IT/Computer related specifications (cat-3 is IT category)
+    if (categoryId.startsWith('cat-3') || 
+        itemTitle.includes('bilgisayar') || 
+        itemTitle.includes('laptop') || 
+        itemTitle.includes('dizüstü')) {
       return [
         { spec_key: "İşlemci", spec_value: "Minimum Intel Core i5 veya AMD Ryzen 5 işlemci", requirement_level: "Zorunlu" as const },
         { spec_key: "RAM (Bellek)", spec_value: "Minimum 8 GB DDR4 RAM", requirement_level: "Zorunlu" as const },
@@ -234,8 +236,10 @@ Phase 1 Data:\n${JSON.stringify(
       ];
     }
     
-    // Office equipment specifications
-    if (category.includes('ofis') || category.includes('mobilya')) {
+    // Office equipment specifications (cat-4 might be office equipment)
+    if (categoryId.startsWith('cat-4') || 
+        itemTitle.includes('ofis') || 
+        itemTitle.includes('mobilya')) {
       return [
         { spec_key: "Malzeme", spec_value: "Yüksek kalite malzeme", requirement_level: "Zorunlu" as const },
         { spec_key: "Boyut", spec_value: "Standart ofis boyutları", requirement_level: "Zorunlu" as const },

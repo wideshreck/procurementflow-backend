@@ -20,7 +20,7 @@ export class ProcurementService {
   async create(createProcurementRequestDto: CreateProcurementRequestDto, user: User) {
     const {
       item_title,
-      category,
+      category_id,
       quantity,
       uom,
       simple_definition,
@@ -36,36 +36,49 @@ export class ProcurementService {
     } = createProcurementRequestDto;
 
     // Check if category exists, if not create a default one or skip the validation
-    let categoryRecord = await this.prisma.category.findUnique({
-      where: { CategoryID: category },
-    });
+    let categoryRecord: any = null;
+    
+    // Skip category lookup if category_id is not provided
+    if (category_id) {
+      categoryRecord = await this.prisma.category.findUnique({
+        where: { CategoryID: category_id },
+      });
+    }
 
-    if (!categoryRecord) {
+    if (!categoryRecord && category_id) {
       // Try to find by name as fallback
       categoryRecord = await this.prisma.category.findFirst({
-        where: { name: category },
+        where: { name: category_id },
       });
-
+    }
+    
+    // If still no category found, create or use a default one
+    if (!categoryRecord) {
+      const categoryIdToUse = category_id || 'DEFAULT-CAT';
+      console.warn(`Category "${categoryIdToUse}" not found, creating/using default category`);
+      
+      // Find or create a default company first
+      let defaultCompany = await this.prisma.company.findFirst();
+      if (!defaultCompany) {
+        defaultCompany = await this.prisma.company.create({
+          data: {
+            name: 'Default Company',
+            description: 'Default company for procurement requests',
+          },
+        });
+      }
+      
+      // Try to find existing default category
+      categoryRecord = await this.prisma.category.findUnique({
+        where: { CategoryID: categoryIdToUse },
+      });
+      
       if (!categoryRecord) {
-        // Create a default category if none found - this prevents the 500 error
-        console.warn(`Category "${category}" not found, creating default category`);
-        
-        // Find or create a default company first
-        let defaultCompany = await this.prisma.company.findFirst();
-        if (!defaultCompany) {
-          defaultCompany = await this.prisma.company.create({
-            data: {
-              name: 'Default Company',
-              description: 'Default company for procurement requests',
-            },
-          });
-        }
-        
         categoryRecord = await this.prisma.category.create({
           data: {
-            CategoryID: category, // Use the provided ID
-            categoryCode: `CODE_${category}`,
-            name: category,
+            CategoryID: categoryIdToUse,
+            categoryCode: `CODE_${categoryIdToUse}`,
+            name: categoryIdToUse,
             level: 1,
             icon: 'Package',
             companyId: defaultCompany.id,

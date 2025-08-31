@@ -98,11 +98,16 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
         // Phase 4 tamamlandı - PHASE_FOUR_DONE
         this.logger.log('Phase 4 completed - moving to PHASE_FOUR_DONE');
         
-        // Tüm verileri güncelle
+        // Tüm verileri birleştir - existingData içindeki tüm fazların verilerini koru
         const finalData = {
           ...existingData,
           ...collectedData,
         };
+        
+        // Total price'ı hesapla
+        if (finalData.delivery_details && finalData.delivery_details.unit_price && finalData.quantity) {
+          finalData.delivery_details.total_price = finalData.delivery_details.unit_price * parseFloat(finalData.quantity);
+        }
 
         await this.prismaService.conversation.update({
           where: { id: conversationId },
@@ -217,11 +222,12 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
     }
     
     const deliveryDetails = data.delivery_details;
-    const required = ['delivery_location', 'due_date', 'urgency', 'contact_person'];
+    const required = ['delivery_location', 'due_date', 'urgency', 'unit_price', 'currency'];
     
     return required.every(field => 
-      deliveryDetails[field] && 
-      deliveryDetails[field].toString().trim()
+      deliveryDetails[field] !== undefined && 
+      deliveryDetails[field] !== null && 
+      deliveryDetails[field].toString().trim() !== ''
     );
   }
 
@@ -296,6 +302,16 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
       if (deliveryDetails.urgency) {
         deliveryDetails.urgency = this.mapUrgency(deliveryDetails.urgency);
       }
+      
+      // Unit price'i number'a çevir
+      if (deliveryDetails.unit_price) {
+        deliveryDetails.unit_price = parseFloat(deliveryDetails.unit_price);
+      }
+      
+      // Total price'i hesapla (quantity varsa)
+      if (deliveryDetails.unit_price && rawData.quantity) {
+        deliveryDetails.total_price = deliveryDetails.unit_price * parseFloat(rawData.quantity);
+      }
     }
 
     return rawData;
@@ -326,10 +342,16 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
         details.urgency = this.mapUrgency(urgencyMatch[1].trim());
       }
       
-      // contact_person_q4 extract
-      const contactMatch = message.match(/contact_person_q4:\s*(.+?)(?:,\s*\w+_q\d+:|$)/);
-      if (contactMatch) {
-        details.contact_person = contactMatch[1].trim();
+      // unit_price_q4 extract
+      const priceMatch = message.match(/unit_price_q4:\s*([\d.]+)/);
+      if (priceMatch) {
+        details.unit_price = parseFloat(priceMatch[1]);
+      }
+      
+      // currency_q5 extract
+      const currencyMatch = message.match(/currency_q5:\s*([^,]+)/);
+      if (currencyMatch) {
+        details.currency = currencyMatch[1].trim();
       }
       
       return details;

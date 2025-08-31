@@ -54,7 +54,7 @@ export class CreateProcurementRequestDto {
 
   @IsString()
   @IsNotEmpty()
-  category: string;
+  category_id: string; // Kategori ID (cat-1, cat-1-1, vb.)
 
   @IsInt()
   @IsNotEmpty()

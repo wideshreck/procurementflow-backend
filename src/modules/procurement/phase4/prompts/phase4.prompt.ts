@@ -35,6 +35,9 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
 - **delivery_location**: Teslimat lokasyonu (departman/adres)
 - **due_date**: En geç teslim tarihi 
 - **urgency**: Aciliyet seviyesi (DÜŞÜK/ORTA/YÜKSEK/ACİL)
+- **unit_price**: Birim fiyat (sayısal değer)
+- **currency**: Para birimi (TRY/USD/EUR)
+- **total_price**: Toplam fiyat (otomatik hesaplanacak)
 
 
 
@@ -43,6 +46,8 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
 - **delivery_location**: TEXT türünde departman/lokasyon
 - **due_date**: DATE türünde tarih seçimi
 - **urgency**: SINGLE_CHOICE türünde aciliyet seçimi
+- **unit_price**: NUMBER türünde birim fiyat
+- **currency**: SINGLE_CHOICE türünde para birimi seçimi (TRY, USD, EUR)
 
 
 
@@ -75,6 +80,17 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
             "question_type": "SINGLE_CHOICE",
             "question_text": "Aciliyet seviyesi nedir?",
             "options": ["DÜŞÜK", "ORTA", "YÜKSEK", "ACİL"]
+        },
+        {
+            "question_id": "unit_price_q4",
+            "question_type": "NUMBER",
+            "question_text": "Birim fiyat nedir?"
+        },
+        {
+            "question_id": "currency_q5",
+            "question_type": "SINGLE_CHOICE",
+            "question_text": "Para birimi nedir?",
+            "options": ["TRY", "USD", "EUR"]
         }
     ]
 }
@@ -110,20 +126,25 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
             "delivery_location": "string",
             "due_date": "DD-MM-YYYY",
             "urgency": "string enum { "DÜŞÜK", "ORTA", "YÜKSEK", "ACİL" }",
+            "unit_price": "number",
+            "currency": "string enum { "TRY", "USD", "EUR" }",
+            "total_price": "number (quantity * unit_price)"
         }
     }
 }
 \`\`\`
 
 ## TAMAMLANMA KOŞULU
-Tüm gerekli bilgiler (delivery_location, due_date, urgency) toplandığında:
+Tüm gerekli bilgiler (delivery_location, due_date, urgency, unit_price, currency) toplandığında:
 - MODE: "PHASE_FOUR_DONE" olarak ayarla
 - COLLECTED_DATA'da tüm verileri topla
 
 ## ÖNEMLİ NOTLAR
 - Kullanıcının verdiği tarih bilgilerini DD-MM-YYYY formatına çevir
 - Teslimat lokasyonu için tam departman adı veya adres iste
+- total_price'ı quantity * unit_price olarak otomatik hesapla
 - Bu fazın sonunda satın alma talebi tamamen hazır olmalı
+- Faz 1, 2 ve 3'ten gelen TÜM VERİLER (item_title, category, subcategory, quantity, uom, simple_definition, cost_center, procurement_type, justification, technical_specifications vb.) nihai çıktıda yer almalıdır
 
 Kullanıcıdan sadece eksik bilgileri sor ve hızlıca tamamla.
 `;
