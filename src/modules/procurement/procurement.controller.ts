@@ -111,7 +111,11 @@ export class ProcurementController {
   }
 
   @Post('request')
-  create(@Body() createProcurementRequestDto: CreateProcurementRequestDto) {
-    return this.procurementService.create(createProcurementRequestDto);
+  @ApiOperation({ summary: 'Create a new procurement request' })
+  @ApiResponse({ status: 201, description: 'Procurement request created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  create(@Body() createProcurementRequestDto: CreateProcurementRequestDto, @CurrentUser() user: User) {
+    return this.procurementService.create(createProcurementRequestDto, user);
   }
 }

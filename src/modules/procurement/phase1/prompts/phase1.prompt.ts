@@ -675,9 +675,6 @@ Bu JSON yapısı, backend tarafından frontend'e gönderilir ve kullanıcı aray
         "cost_center": string, // Kullanıcıdan alınan bilgiler ve sana verilen maliyet merkezleri ile kendin dolduracaksın
         "procurement_type": string enum { "Ürün Alımı", "Hizmet Alımı" }, // kullanıcıya asla sorulmamalı kendin çıkarım yapmalı ve doldurmalısın
         "request_justification": string, // ÖNEMLİ: Kullanıcının verdiği cevaplardan talebin nedenini çıkar
-        "currency": string, // kullanıcıya sorulabilir
-        "unitPrice": number, // kullanıcıya sorulabilir
-        "totalPrice": number // otomatik hesaplanacak
     }
 }
 `;

@@ -98,10 +98,12 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
         // Phase 4 tamamlandı - PHASE_FOUR_DONE
         this.logger.log('Phase 4 completed - moving to PHASE_FOUR_DONE');
         
-        // Tüm verileri güncelle
+        // Tüm verileri güncelle - önceki fazların verilerini koruyarak
         const finalData = {
           ...existingData,
           ...collectedData,
+          // Teknik özellikler Phase 3'ten gelmiştir, koruyalım
+          technical_specifications: existingData.technical_specifications || collectedData.technical_specifications,
         };
 
         await this.prismaService.conversation.update({
@@ -119,10 +121,12 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
         // Daha fazla bilgi gerekiyor
         this.logger.log('Phase 4 continuing - need more info');
         
-        // Partial verileri kaydet
+        // Partial verileri kaydet - önceki fazların verilerini koruyarak
         const updatedData = {
           ...existingData,
           ...collectedData,
+          // Teknik özellikler Phase 3'ten gelmiştir, koruyalım
+          technical_specifications: existingData.technical_specifications || collectedData.technical_specifications,
         };
 
         await this.prismaService.conversation.update({

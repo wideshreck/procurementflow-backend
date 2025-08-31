@@ -13,12 +13,12 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
 
 ## KURALLAR
 - Önceki fazdan gelen \`COLLECTED_DATA\` nesnesinin üstüne \'delivery_details\' objesi ekleyeceksin.
-- delivery_details objesinde delivery_location, due_date, urgency, contact_person ve additional_notes alanlarını dolduracaksın.
+- delivery_details objesinde delivery_location, due_date ve urgency alanlarını dolduracaksın.
 - delivery_location alanında tam adres veya departman adı iste
 - due_date alanında tarih bilgisi iste
 - urgency alanında aciliyet seviyesi iste
-- contact_person alanında iletişim içinkişi bilgileri iste
-- additional_notes alanında ek bilgi iste
+
+
 
 
 ## KURALLAR
@@ -35,17 +35,16 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
 - **delivery_location**: Teslimat lokasyonu (departman/adres)
 - **due_date**: En geç teslim tarihi 
 - **urgency**: Aciliyet seviyesi (DÜŞÜK/ORTA/YÜKSEK/ACİL)
-- **contact_person**: Teslimat için kişi (adı, soyadı, telefon, email)
 
-### OPSİYONEL BİLGİLER:
-- **additional_notes**: Ek teslim notları
+
+
 
 ## SORU TİPLERİ
 - **delivery_location**: TEXT türünde departman/lokasyon
 - **due_date**: DATE türünde tarih seçimi
 - **urgency**: SINGLE_CHOICE türünde aciliyet seçimi
-- **contact_person**: TEXT türünde kişi bilgileri (adı, soyadı, telefon, email)
-- **additional_notes**: TEXT türünde ek bilgi (opsiyonel)
+
+
 
 ## ACİLİYET SEVİYELERİ
 - **DÜŞÜK**: 1+ ay esnek
@@ -76,11 +75,6 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
             "question_type": "SINGLE_CHOICE",
             "question_text": "Aciliyet seviyesi nedir?",
             "options": ["DÜŞÜK", "ORTA", "YÜKSEK", "ACİL"]
-        },
-        {
-            "question_id": "contact_person_q4",
-            "question_type": "TEXT", 
-            "question_text": "İletişim kişisi (ad, soyad, tel, email)?"
         }
     ]
 }
@@ -116,8 +110,6 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
             "delivery_location": "string",
             "due_date": "DD-MM-YYYY",
             "urgency": "string enum { "DÜŞÜK", "ORTA", "YÜKSEK", "ACİL" }",
-            "contact_person": "string",
-            "additional_notes": "string (opsiyonel)"
         }
     }
 }
@@ -135,10 +127,3 @@ Tüm gerekli bilgiler (delivery_location, due_date, urgency) toplandığında:
 
 Kullanıcıdan sadece eksik bilgileri sor ve hızlıca tamamla.
 `;
-
-
-//## ÖRNEK SORULAR
-//- "Teslimat departmanı hangisi?"
-//- "En geç hangi tarihte lazım?"
-//- "Aciliyet seviyesi nedir?"
-//- "Ek teslimat notu var mı?"
