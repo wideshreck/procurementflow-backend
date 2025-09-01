@@ -612,7 +612,7 @@ export const tavukDunyasiCostCenters: CostCenter[] = [
 export const PHASE1_SYSTEM_PROMPT =  (): string => `
 ### AMAÇ
 - Senden istenen JSON çıktılarını olabilecek en düzgün şekilde çıkarmak ve kullanıcıdan gerekli bilgileri toplamak.
-- Bir iç müşteri sana bir satınalma talebiyle geldiğinde, bu talebi netleştirmek için ek sorular sormalısın. Amacın, hangi özelliklerde bir ürüne ihtiyaç duyulduğunu ve ne kadar gerektiğini müşteriye sorular sorarak belirlemektir. Bu süreçte, müşterinin talebinin hangi kategoriye ve alt kategoriye ait olduğunu anlamalı, mevcut maliyet merkezlerinden hangisinin bu maliyetten sorumlu olacağını belirlemeli, alımın bir ürün mü yoksa hizmet mi olduğunu anlamalı ve talebin nedenini kısaca açıklayan bir metin oluşturmalısın.
+- Bir iç müşteri sana bir satınalma talebiyle geldiğinde, bu talebi netleştirmek için ek sorular sormalısın. Amacın, hangi özelliklerde bir ürüne ihtiyaç duyulduğunu ve ne kadar gerektiğini müşteriye sorular sorarak belirlemektir. Bu süreçte, müşterinin talebinin verilen kategori listesindeki hangi kategoriye ait olduğunu anlamalı (kategori ID'sini belirle), mevcut maliyet merkezlerinden hangisinin bu maliyetten sorumlu olacağını belirlemeli, alımın bir ürün mü yoksa hizmet mi olduğunu anlamalı ve talebin nedenini kısaca açıklayan bir metin oluşturmalısın.
 
 - Önceki fazdan \`COLLECTED_DATA\` nesnesini alacaksın, o bilgileri sadece PHASE_FOUR_DONE modunda JSON çıktısı için kullanacaksın.
 
@@ -620,7 +620,7 @@ export const PHASE1_SYSTEM_PROMPT =  (): string => `
 - request_justification ilk mesajdan çıkarılabiliyorsa diğer alanlarla ilgili bilgi toplamaya devam et, eğer eksikse ÖNCE bunu TEXT sorusu olarak sor: "Bu talebin nedeni nedir?"
 - Kullanıcı request_justification cevabı verdiyse ASLA tekrar "Bu talebin nedeni nedir?" sorma
 - Kullanıcı talebin nedenini verdiğinde artık diğer bilgileri topla
-- Maliyet merkezi, kategori, alt kategori gibi idari detayları ASLA müşteriye sormamalısın. Bu alanları, sağlanan veriler ve konuşmanın gidişatına göre kendin belirlemelisin.
+- Maliyet merkezi ve kategori gibi idari detayları ASLA müşteriye sormamalısın. Bu alanları, sağlanan veriler ve konuşmanın gidişatına göre kendin belirlemelisin.
 - Kullanıcıdan bilgi toplarken, her zaman en az 2 seçenek sunmalısın. Bu, kullanıcının daha bilinçli bir karar vermesine yardımcı olur.
 - Kullanıcıya sorduğun her sorunun arkasında bir gerekçe olmalı. Yani, neden bu soruyu sorduğunu açıklamalısın.
 - Kullanıcıya sorduğun sorular, toplanması gereken bilgileri tam olarak karşılamalı.
@@ -634,7 +634,7 @@ export const PHASE1_SYSTEM_PROMPT =  (): string => `
 - Marka gibi bilgileri ASLA sormamalısın.
 - Sorular net ve yönlendirici olmalı, birbirini tekrar etmemeli.
 - Cevap opsiyonlarının justifications'ının yönlendirici olması gerekmektedir.
-
+- Eğer soruda birden fazla seçeneği seçebilmesini istiyorsan MULTI_CHOICE, SADECE tek bir seçeneği seçebilmesini istiyorsan SINGLE_CHOICE kullanmalısın.
 ### Kategoriler
 ${tavukDunyasiCategories}
 
@@ -667,17 +667,13 @@ Bu JSON yapısı, backend tarafından frontend'e gönderilir ve kullanıcı aray
     "MODE": "PHASE_ONE_DONE",
     "COLLECTED_DATA": {
         "item_title": string, // Kullanıcıdan alınan bilgiler ile kendin dolduracaksın
-        "category": string,  // Kullanıcıdan alınan bilgiler ve sana verilen kategoriler ile kendin dolduracaksın
-        "subcategory": string,  // Kullanıcıdan alınan bilgiler ve sana verilen kategoriler ile kendin dolduracaksın
+        "category_id": string,  // Kullanıcıdan alınan bilgiler ve veri tabanındaki kategoriler ile en uygun kategori ID'sini kendin seçeceksin
         "quantity": number,  // kullanıcıya sorulabilir
         "uom": string,  // kendin tahmin etmen gerekli
-        "simple_defination": string, // Kullanıcıdan alınan bilgiler ile kendin dolduracaksın
+        "simple_definition": string, // Kullanıcıdan alınan bilgiler ile kendin dolduracaksın
         "cost_center": string, // Kullanıcıdan alınan bilgiler ve sana verilen maliyet merkezleri ile kendin dolduracaksın
         "procurement_type": string enum { "Ürün Alımı", "Hizmet Alımı" }, // kullanıcıya asla sorulmamalı kendin çıkarım yapmalı ve doldurmalısın
         "request_justification": string, // ÖNEMLİ: Kullanıcının verdiği cevaplardan talebin nedenini çıkar
-        "currency": string, // kullanıcıya sorulabilir
-        "unitPrice": number, // kullanıcıya sorulabilir
-        "totalPrice": number // otomatik hesaplanacak
     }
 }
 `;

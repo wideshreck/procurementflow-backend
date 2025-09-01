@@ -12,6 +12,15 @@ export enum UrgencyLevel {
 }
 
 /**
+ * Para birimi enum
+ */
+export enum Currency {
+  TRY = 'TRY',
+  USD = 'USD',
+  EUR = 'EUR'
+}
+
+/**
  * Teslimat detayları DTO'su
  */
 export class DeliveryDetailsDto {
@@ -27,14 +36,15 @@ export class DeliveryDetailsDto {
   @IsString()
   due_date: string; // Teslim tarihi (DD-MM-YYYY format)
 
+  @IsNotEmpty()
+  unit_price: number; // Birim fiyat
 
   @IsNotEmpty()
-  @IsString()
-  contact_person: string; // İletişim kurulacak kişi
+  @IsEnum(Currency)
+  currency: Currency; // Para birimi
 
   @IsOptional()
-  @IsString()
-  additional_notes?: string; // Ek notlar
+  total_price?: number; // Toplam fiyat (quantity * unit_price)
 }
 
 /**
@@ -65,11 +75,7 @@ export class Phase4CollectedDataDto {
 
   @IsOptional()
   @IsString()
-  category?: string;
-
-  @IsOptional()
-  @IsString()
-  subcategory?: string;
+  category_id?: string; // Kategori ID (cat-1, cat-1-1, vb.)
 
   @IsOptional()
   quantity?: number;

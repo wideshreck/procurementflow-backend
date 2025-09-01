@@ -12,10 +12,7 @@ export class Phase1DataDto {
   item_title: string;
 
   @IsString()
-  category: string;
-
-  @IsString()
-  subcategory: string;
+  category_id: string;
 
   @IsNumber()
   quantity: number;

@@ -148,20 +148,37 @@ export class OrchestratorService {
             JSON.stringify(phase2Data),
           );
         } else if (nextPhase === ProcurementPhase.SUPPLIER_PRODUCT_SUGGESTIONS) {
-          this.logger.log('Phase 3 complete, starting Phase 4');
+          // Phase 4 can be reached from both Phase 2 (catalog selection) and Phase 3 (manual specs)
+          const previousPhase = conversation.phase;
+          if (previousPhase === ProcurementPhase.SUGGESTIONS) {
+            this.logger.log('Phase 2 catalog selection complete, starting Phase 4');
+            this.logger.log(`Current collected data before Phase 4: ${JSON.stringify(conversation.collectedData).substring(0, 200)}...`);
+          } else {
+            this.logger.log('Phase 3 complete, starting Phase 4');
+          }
           response = await this.phase4Service.processPhase4(
             conversation.id,
-            "Phase 3 tamamlandı, teslimat bilgilerini alalım",
+            "Teslimat bilgilerini alalım",
           );
+          this.logger.log(`Phase 4 response mode: ${response.MODE}`);
         }
       }
 
       await this.saveMessage(conversation.id, MessageRole.ASSISTANT, response);
 
+      // Handle conversation completion: create new conversation ID for next interaction
+      let finalConversationId = conversation.id;
+      if (response.MODE === ChatbotMode.PHASE_FOUR_DONE) {
+        // Create a new conversation for the next interaction when current one is completed
+        const newConversation = await this.createNewConversation(userId);
+        finalConversationId = newConversation.id;
+        this.logger.log(`Conversation completed, new conversation ready: ${finalConversationId}`);
+      }
+
       // Ensure conversationId is always included in response
       const responseWithId = {
         ...response,
-        conversationId: conversation.id,
+        conversationId: finalConversationId,
       };
 
       return responseWithId;
@@ -176,33 +193,65 @@ export class OrchestratorService {
   }
 
   /**
-   * Clean conversation management: Each conversation is isolated and unique.
-   * New conversations are always created unless a specific ID is provided.
+   * Smart conversation management: Reuse active conversations, create new only when needed.
+   * New conversations are only created when:
+   * 1. No conversationId provided and no active conversation exists
+   * 2. Provided conversationId is completed, cancelled, or doesn't exist
+   * 3. Conversation belongs to different user
    */
   private async findOrCreateActiveConversation(
     userId: string,
     conversationId?: string,
   ): Promise<Conversation> {
-    // If conversationId provided, try to find it and validate it's still active
+    // If conversationId provided, try to find it and validate it
     if (conversationId) {
       const conversation = await this.prisma.conversation.findUnique({
         where: { id: conversationId },
       });
       
-      // Only return existing conversation if it belongs to user and is still active
+      // Return existing conversation if it belongs to user and is still active
       if (conversation && 
           conversation.userId === userId && 
           conversation.status === ConversationStatus.ACTIVE) {
+        this.logger.log(`Reusing active conversation: ${conversationId}`);
         return conversation;
       }
       
-      // If conversation exists but completed/cancelled, log it and create new one
+      // If conversation exists but completed/cancelled, create new one
       if (conversation && conversation.userId === userId) {
         this.logger.log(`Conversation ${conversationId} is ${conversation.status}, creating new one`);
+      } else if (conversation) {
+        this.logger.log(`Conversation ${conversationId} belongs to different user, creating new one`);
+      } else {
+        this.logger.log(`Conversation ${conversationId} not found, creating new one`);
       }
+      
+      // Create new conversation since the provided one is not usable
+      return await this.createNewConversation(userId);
     }
 
-    // Always create a new conversation for clean isolation
+    // No conversationId provided, check if user has an active conversation
+    const existingActiveConversation = await this.prisma.conversation.findFirst({
+      where: { 
+        userId, 
+        status: ConversationStatus.ACTIVE 
+      },
+    });
+
+    if (existingActiveConversation) {
+      this.logger.log(`Found existing active conversation: ${existingActiveConversation.id}`);
+      return existingActiveConversation;
+    }
+
+    // No active conversation found, create new one
+    return await this.createNewConversation(userId);
+  }
+
+  /**
+   * Creates a new conversation for the user.
+   * Cancels any existing active conversations to prevent conflicts.
+   */
+  private async createNewConversation(userId: string): Promise<Conversation> {
     // Close any other active conversations for this user to prevent conflicts
     await this.prisma.conversation.updateMany({
       where: { 
@@ -237,30 +286,63 @@ export class OrchestratorService {
     nextPhase: ProcurementPhase,
     response: ChatbotResponse,
   ): Promise<Conversation> {
-    const newCollectedData = conversation.collectedData
+    const currentData = conversation.collectedData
       ? { ...(conversation.collectedData as object) }
       : {};
+
+    let newCollectedData = currentData;
 
     // Update collectedData on phase completion
     if ('COLLECTED_DATA' in response) {
       if (response.MODE === ChatbotMode.PHASE_ONE_DONE) {
+        // For Phase 1, merge data directly
+        newCollectedData = { ...currentData, ...response.COLLECTED_DATA };
         newCollectedData['phase1'] = response.COLLECTED_DATA;
       } else if (response.MODE === ChatbotMode.PHASE_TWO_DONE) {
+        // For Phase 2 done, preserve all previous data
+        newCollectedData = { ...currentData, ...response.COLLECTED_DATA };
         newCollectedData['phase2'] = response.COLLECTED_DATA;
       } else if (response.MODE === ChatbotMode.PHASE_THREE_DONE) {
+        // For Phase 3, merge technical specifications
+        newCollectedData = { ...currentData, ...response.COLLECTED_DATA };
         newCollectedData['phase3'] = response.COLLECTED_DATA;
       } else if (response.MODE === ChatbotMode.PHASE_FOUR_DONE) {
-        newCollectedData['phase4'] = response.COLLECTED_DATA;
+        // For Phase 4, ensure all data is preserved
+        // The response.COLLECTED_DATA should already contain all merged data from Phase 4 service
+        newCollectedData = response.COLLECTED_DATA;
       }
     }
 
-    // Handle PHASE_TWO_CATALOG_MATCH separately
-    if (response.MODE === ChatbotMode.PHASE_TWO_CATALOG_MATCH) {
+    // Handle PHASE_TWO_CATALOG_MATCH and PHASE_TWO_SELECTED
+    if (response.MODE === ChatbotMode.PHASE_TWO_CATALOG_MATCH || 
+        response.MODE === ChatbotMode.PHASE_TWO_SELECTED) {
+      this.logger.log(`Handling ${response.MODE} - transitioning to Phase 4`);
       if ('COLLECTED_DATA' in response) {
-        newCollectedData['phase2'] = response.COLLECTED_DATA;
+        // Merge catalog data with existing data
+        const collectedData = response.COLLECTED_DATA as Record<string, any>;
+        newCollectedData = { ...currentData, ...collectedData };
+        newCollectedData['phase2'] = collectedData;
+        this.logger.log(`Phase 2 collected data merged: ${JSON.stringify(newCollectedData).substring(0, 200)}...`);
+        
+        // Preserve technical specifications if they exist and ensure requirement_level is 'Zorunlu'
+        if (collectedData.technical_specifications) {
+          newCollectedData['technical_specifications'] = collectedData.technical_specifications.map((spec: any) => ({
+            ...spec,
+            requirement_level: 'Zorunlu'
+          }));
+        }
       }
       if ('SELECTED_CATALOG_ITEM' in response) {
-        newCollectedData['selectedCatalogItem'] = response.SELECTED_CATALOG_ITEM;
+        const selectedItem = response.SELECTED_CATALOG_ITEM as Record<string, any>;
+        newCollectedData['selectedCatalogItem'] = selectedItem;
+        
+        // Extract technical specifications from selected item and ensure requirement_level is 'Zorunlu'
+        if (selectedItem.technical_specifications) {
+          newCollectedData['technical_specifications'] = selectedItem.technical_specifications.map((spec: any) => ({
+            ...spec,
+            requirement_level: 'Zorunlu'
+          }));
+        }
       }
     }
 
@@ -332,7 +414,8 @@ export class OrchestratorService {
 
   /**
    * Cancels the active conversation for a user.
-   * @returns The cancelled conversation ID if found.
+   * Does NOT create a new conversation - let the next message trigger that.
+   * @returns undefined to signal frontend to clear its conversation ID
    */
   async cancelConversation(userId: string): Promise<string | undefined> {
     const activeConversation = await this.prisma.conversation.findFirst({
@@ -350,9 +433,14 @@ export class OrchestratorService {
       await this.deleteConversationHistory(activeConversation.id);
 
       this.logger.log(`Cancelled conversation ${activeConversation.id} for user ${userId}`);
-      return activeConversation.id;
+      
+      // Return undefined to signal frontend to clear conversation ID
+      // Next message will create a new conversation automatically
+      return undefined;
     }
     
+    // No active conversation found, return undefined
+    this.logger.log(`No active conversation found for user ${userId}`);
     return undefined;
   }
 }

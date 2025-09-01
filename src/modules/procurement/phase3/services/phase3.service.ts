@@ -31,6 +31,69 @@ export class Phase3Service {
         }
       }
 
+      // Check if user selected a predefined profile
+      if (message && message.startsWith('PHASE_THREE_PROFILE_SELECTED:')) {
+        try {
+          const selectedProfile = JSON.parse(message.replace('PHASE_THREE_PROFILE_SELECTED:', '').trim());
+          this.logger.log('User selected a predefined profile, moving to Phase 4');
+          
+          // Ensure all technical specifications have requirement_level set to 'Zorunlu'
+          if (selectedProfile.technical_specifications && Array.isArray(selectedProfile.technical_specifications)) {
+            selectedProfile.technical_specifications = selectedProfile.technical_specifications.map((spec: any) => ({
+              ...spec,
+              requirement_level: spec.requirement_level || 'Zorunlu'
+            }));
+          }
+          
+          // Get existing conversation data properly
+          const existingData = conversation.collectedData as any || {};
+          
+          // Extract phase1 and phase2 data if they exist
+          const phase1Data = existingData.phase1 || existingData;
+          const phase2Data = existingData.phase2 || {};
+          
+          // Build the properly structured merged data
+          const mergedData = {
+            // Include all phase1 fields at root level for backward compatibility
+            ...(phase1Data.item_title ? phase1Data : {}),
+            // Include phase2 data if exists
+            ...(phase2Data.selected_catalog_item ? { selected_catalog_item: phase2Data.selected_catalog_item } : {}),
+            // Add technical specifications from selected profile
+            technical_specifications: selectedProfile.technical_specifications || [],
+            selected_profile: selectedProfile.suggestion_name || selectedProfile.item_name,
+            // Phase 3'ten gelen estimated_cost_per_unit'i unit_price olarak ata
+            unit_price: selectedProfile.estimated_cost_per_unit ? parseFloat(selectedProfile.estimated_cost_per_unit) : null,
+            currency: 'TRY',
+            // Preserve phase structure
+            phase1: phase1Data,
+            phase2: phase2Data,
+            phase3: {
+              technical_specifications: selectedProfile.technical_specifications || [],
+              selected_profile: selectedProfile.suggestion_name || selectedProfile.item_name,
+              unit_price: selectedProfile.estimated_cost_per_unit ? parseFloat(selectedProfile.estimated_cost_per_unit) : null,
+              currency: 'TRY'
+            }
+          };
+          
+          // Update conversation with selected profile data
+          await this.prisma.conversation.update({
+            where: { id: conversation.id },
+            data: {
+              collectedData: mergedData,
+            },
+          });
+          
+          this.logger.log(`Updated conversation ${conversation.id} with merged data:`, JSON.stringify(mergedData, null, 2));
+          
+          return {
+            MODE: ChatbotMode.PHASE_THREE_DONE,
+            COLLECTED_DATA: mergedData,
+          } as ChatbotResponse;
+        } catch (e) {
+          this.logger.error('Error parsing PHASE_THREE_PROFILE_SELECTED message', e);
+        }
+      }
+
       // Check if this is a manual technical specifications submission
       if (message.startsWith('Teknik Özellikler:') || 
           message.startsWith('Teknik Özellikler Onaylandı:') || 
@@ -121,16 +184,28 @@ Phase 1 Data:\n${JSON.stringify(
   ): ChatbotResponse {
     this.logger.log('Processing manual technical specifications');
     
-    const collectedData = conversation.collectedData as any;
-    const phase1Data = collectedData?.phase1 || {};
+    const existingData = conversation.collectedData as any || {};
+    const phase1Data = existingData?.phase1 || existingData;
+    const phase2Data = existingData?.phase2 || {};
     
     // Parse technical specifications from the message
     const technicalSpecs = this.parseManualTechnicalSpecsFromMessage(message);
     
-    // Create the final COLLECTED_DATA with all phase information
+    // Create the final COLLECTED_DATA with proper structure
     const finalCollectedData = {
-      ...phase1Data,
+      // Include all phase1 fields at root level for backward compatibility
+      ...(phase1Data.item_title ? phase1Data : {}),
+      // Include phase2 data if exists
+      ...(phase2Data.selected_catalog_item ? { selected_catalog_item: phase2Data.selected_catalog_item } : {}),
+      // Add technical specifications
       technical_specifications: technicalSpecs,
+      // Preserve phase structure
+      phase1: phase1Data,
+      phase2: phase2Data,
+      phase3: {
+        technical_specifications: technicalSpecs,
+        manual_entry: true
+      }
     };
 
     return {
@@ -197,19 +272,42 @@ Phase 1 Data:\n${JSON.stringify(
         collectedData.technical_specifications = this.createFallbackTechnicalSpecs(phase1Data);
       }
       
+      // Get existing data for proper structure
+      const existingData = conversation.collectedData as any || {};
+      
+      // Ensure proper data structure
+      const properlyStructuredData = {
+        ...phase1Data,
+        ...collectedData,
+        phase1: phase1Data,
+        phase2: existingData.phase2 || {},
+        phase3: {
+          technical_specifications: collectedData.technical_specifications,
+          ai_generated: true
+        }
+      };
+      
       return {
         MODE: ChatbotMode.PHASE_THREE_APPROVAL, // Return approval mode to show form
-        COLLECTED_DATA: collectedData,
+        COLLECTED_DATA: properlyStructuredData,
       } as ChatbotResponse;
     }
     
     // If AI didn't generate PHASE_THREE_DONE, create a manual fallback
     this.logger.warn('AI did not generate PHASE_THREE_DONE mode, creating manual fallback');
+    const existingData = conversation.collectedData as any || {};
+    const fallbackSpecs = this.createFallbackTechnicalSpecs(phase1Data);
     return {
       MODE: ChatbotMode.PHASE_THREE_APPROVAL, // Return approval mode to show form
       COLLECTED_DATA: {
         ...phase1Data,
-        technical_specifications: this.createFallbackTechnicalSpecs(phase1Data),
+        technical_specifications: fallbackSpecs,
+        phase1: phase1Data,
+        phase2: existingData.phase2 || {},
+        phase3: {
+          technical_specifications: fallbackSpecs,
+          ai_generated: true
+        }
       },
     } as ChatbotResponse;
   }
@@ -218,12 +316,14 @@ Phase 1 Data:\n${JSON.stringify(
    * Create fallback technical specifications when AI fails to generate them
    */
   private createFallbackTechnicalSpecs(phase1Data: any) {
-    const category = phase1Data.category?.toLowerCase() || '';
-    const subcategory = phase1Data.subcategory?.toLowerCase() || '';
+    const categoryId = phase1Data.category_id || '';
+    const itemTitle = phase1Data.item_title?.toLowerCase() || '';
     
-    // IT/Computer related specifications
-    if (category.includes('it') || category.includes('bilgisayar') || 
-        subcategory.includes('laptop') || subcategory.includes('dizüstü')) {
+    // IT/Computer related specifications (cat-3 is IT category)
+    if (categoryId.startsWith('cat-3') || 
+        itemTitle.includes('bilgisayar') || 
+        itemTitle.includes('laptop') || 
+        itemTitle.includes('dizüstü')) {
       return [
         { spec_key: "İşlemci", spec_value: "Minimum Intel Core i5 veya AMD Ryzen 5 işlemci", requirement_level: "Zorunlu" as const },
         { spec_key: "RAM (Bellek)", spec_value: "Minimum 8 GB DDR4 RAM", requirement_level: "Zorunlu" as const },
@@ -234,8 +334,10 @@ Phase 1 Data:\n${JSON.stringify(
       ];
     }
     
-    // Office equipment specifications
-    if (category.includes('ofis') || category.includes('mobilya')) {
+    // Office equipment specifications (cat-4 might be office equipment)
+    if (categoryId.startsWith('cat-4') || 
+        itemTitle.includes('ofis') || 
+        itemTitle.includes('mobilya')) {
       return [
         { spec_key: "Malzeme", spec_value: "Yüksek kalite malzeme", requirement_level: "Zorunlu" as const },
         { spec_key: "Boyut", spec_value: "Standart ofis boyutları", requirement_level: "Zorunlu" as const },

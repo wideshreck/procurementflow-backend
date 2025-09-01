@@ -24,7 +24,7 @@ class DeliveryDetailsDto {
   @IsNotEmpty()
   delivery_location: string;
 
-  @IsDateString()
+  @IsString() // Changed from @IsDateString() to accept DD-MM-YYYY format
   @IsNotEmpty()
   due_date: string;
 
@@ -54,7 +54,7 @@ export class CreateProcurementRequestDto {
 
   @IsString()
   @IsNotEmpty()
-  category: string;
+  category_id: string; // Kategori ID (cat-1, cat-1-1, vb.)
 
   @IsInt()
   @IsNotEmpty()

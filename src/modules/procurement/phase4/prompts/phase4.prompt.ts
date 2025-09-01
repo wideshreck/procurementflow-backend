@@ -13,12 +13,12 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
 
 ## KURALLAR
 - Önceki fazdan gelen \`COLLECTED_DATA\` nesnesinin üstüne \'delivery_details\' objesi ekleyeceksin.
-- delivery_details objesinde delivery_location, due_date, urgency, contact_person ve additional_notes alanlarını dolduracaksın.
+- delivery_details objesinde delivery_location, due_date ve urgency alanlarını dolduracaksın.
 - delivery_location alanında tam adres veya departman adı iste
 - due_date alanında tarih bilgisi iste
 - urgency alanında aciliyet seviyesi iste
-- contact_person alanında iletişim içinkişi bilgileri iste
-- additional_notes alanında ek bilgi iste
+
+
 
 
 ## KURALLAR
@@ -35,17 +35,21 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
 - **delivery_location**: Teslimat lokasyonu (departman/adres)
 - **due_date**: En geç teslim tarihi 
 - **urgency**: Aciliyet seviyesi (DÜŞÜK/ORTA/YÜKSEK/ACİL)
-- **contact_person**: Teslimat için kişi (adı, soyadı, telefon, email)
+- **unit_price**: Birim fiyat (sayısal değer)
+- **currency**: Para birimi (TRY/USD/EUR)
+- **total_price**: Toplam fiyat (otomatik hesaplanacak)
 
-### OPSİYONEL BİLGİLER:
-- **additional_notes**: Ek teslim notları
+
+
 
 ## SORU TİPLERİ
 - **delivery_location**: TEXT türünde departman/lokasyon
 - **due_date**: DATE türünde tarih seçimi
 - **urgency**: SINGLE_CHOICE türünde aciliyet seçimi
-- **contact_person**: TEXT türünde kişi bilgileri (adı, soyadı, telefon, email)
-- **additional_notes**: TEXT türünde ek bilgi (opsiyonel)
+- **unit_price**: NUMBER türünde birim fiyat
+- **currency**: SINGLE_CHOICE türünde para birimi seçimi (TRY, USD, EUR)
+
+
 
 ## ACİLİYET SEVİYELERİ
 - **DÜŞÜK**: 1+ ay esnek
@@ -78,9 +82,15 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
             "options": ["DÜŞÜK", "ORTA", "YÜKSEK", "ACİL"]
         },
         {
-            "question_id": "contact_person_q4",
-            "question_type": "TEXT", 
-            "question_text": "İletişim kişisi (ad, soyad, tel, email)?"
+            "question_id": "unit_price_q4",
+            "question_type": "NUMBER",
+            "question_text": "Birim fiyat nedir?"
+        },
+        {
+            "question_id": "currency_q5",
+            "question_type": "SINGLE_CHOICE",
+            "question_text": "Para birimi nedir?",
+            "options": ["TRY", "USD", "EUR"]
         }
     ]
 }
@@ -116,29 +126,29 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
             "delivery_location": "string",
             "due_date": "DD-MM-YYYY",
             "urgency": "string enum { "DÜŞÜK", "ORTA", "YÜKSEK", "ACİL" }",
-            "contact_person": "string",
-            "additional_notes": "string (opsiyonel)"
+            "unit_price": "number",
+            "currency": "string enum { "TRY", "USD", "EUR" }",
+            "total_price": "number (quantity * unit_price)"
         }
     }
 }
 \`\`\`
 
 ## TAMAMLANMA KOŞULU
-Tüm gerekli bilgiler (delivery_location, due_date, urgency) toplandığında:
+Aşağıdaki bilgiler toplandığında:
+- delivery_location, due_date, urgency (her zaman gerekli)
+- unit_price ve currency (SADECE önceki fazlardan gelmediyse sor)
+
+Eğer MEVCUT VERİLER içinde unit_price varsa, kullanıcıdan unit_price isteme.
 - MODE: "PHASE_FOUR_DONE" olarak ayarla
 - COLLECTED_DATA'da tüm verileri topla
 
 ## ÖNEMLİ NOTLAR
 - Kullanıcının verdiği tarih bilgilerini DD-MM-YYYY formatına çevir
 - Teslimat lokasyonu için tam departman adı veya adres iste
+- total_price'ı quantity * unit_price olarak otomatik hesapla
 - Bu fazın sonunda satın alma talebi tamamen hazır olmalı
+- Faz 1, 2 ve 3'ten gelen TÜM VERİLER (item_title, category, subcategory, quantity, uom, simple_definition, cost_center, procurement_type, justification, technical_specifications vb.) nihai çıktıda yer almalıdır
 
 Kullanıcıdan sadece eksik bilgileri sor ve hızlıca tamamla.
 `;
-
-
-//## ÖRNEK SORULAR
-//- "Teslimat departmanı hangisi?"
-//- "En geç hangi tarihte lazım?"
-//- "Aciliyet seviyesi nedir?"
-//- "Ek teslimat notu var mı?"

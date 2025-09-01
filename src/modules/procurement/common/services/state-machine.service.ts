@@ -30,7 +30,8 @@ export class StateMachineService {
       from: ProcurementPhase.SUGGESTIONS,
       to: ProcurementPhase.SUPPLIER_PRODUCT_SUGGESTIONS,
       condition: (response) =>
-        response.MODE === ChatbotMode.PHASE_TWO_CATALOG_MATCH,
+        response.MODE === ChatbotMode.PHASE_TWO_CATALOG_MATCH ||
+        response.MODE === ChatbotMode.PHASE_TWO_SELECTED,
     },
     // Phase 3 -> Phase 4 when Phase 3 is complete (manual specs or predefined profile selected)
     {

@@ -21,6 +21,7 @@ export enum ChatbotMode {
   SUGGESTION_FOR_PREDEFINED_PROFILES = 'SUGGESTION_FOR_PREDEFINED_PROFILES',
   PHASE_ONE_DONE = 'PHASE_ONE_DONE',
   PHASE_TWO_CATALOG_MATCH = 'PHASE_TWO_CATALOG_MATCH',
+  PHASE_TWO_SELECTED = 'PHASE_TWO_SELECTED',
   PHASE_TWO_DONE = 'PHASE_TWO_DONE',
   PHASE_THREE_SPECS = 'PHASE_THREE_SPECS',
   PHASE_THREE_APPROVAL = 'PHASE_THREE_APPROVAL',
@@ -111,6 +112,10 @@ class SuggestionDto {
   estimated_cost_per_unit?: number; // Used in Phase 3
 
   @IsString()
+  @IsOptional()
+  last_updated_price?: string; // Used in Phase 2 for catalog suggestions
+
+  @IsString()
   @IsNotEmpty()
   justification: string;
 
@@ -158,10 +163,7 @@ class Phase1CollectedDataDto {
   item_title: string;
 
   @IsString()
-  category: string;
-
-  @IsString()
-  subcategory: string;
+  category_id: string; // Kategori ID (cat-1, cat-1-1, vb.)
 
   @IsNumber()
   quantity: number;
@@ -204,6 +206,18 @@ export class PhaseTwoCatalogMatchResponseDto {
   @IsString()
   @IsOptional()
   MESSAGE?: string;
+}
+
+// Phase 2 Selected - User selected a catalog item, proceeding to Phase 4
+export class PhaseTwoSelectedResponseDto {
+  @IsEnum(ChatbotMode)
+  MODE: ChatbotMode.PHASE_TWO_SELECTED;
+
+  @IsOptional()
+  COLLECTED_DATA?: any;
+
+  @IsOptional()
+  SELECTED_CATALOG_ITEM?: any;
 }
 
 // Represents the completion of Phase 2, indicating whether a catalog item was selected.
@@ -312,6 +326,7 @@ export type ChatbotResponse =
   | SuggestionForPredefinedProfilesResponseDto
   | PhaseOneDoneResponseDto
   | PhaseTwoCatalogMatchResponseDto
+  | PhaseTwoSelectedResponseDto
   | PhaseTwoDoneResponseDto
   | PhaseThreeSpecsResponseDto
   | PhaseThreeApprovalResponseDto
