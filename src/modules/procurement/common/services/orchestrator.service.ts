@@ -40,28 +40,6 @@ export class OrchestratorService {
     conversationId?: string,
   ): Promise<ChatbotResponse> {
     try {
-      // HACK: Create a test user and company for the demo endpoint if they don't exist
-      if (userId === 'test-user-demo') {
-        await this.prisma.company.upsert({
-          where: { id: 'test-company' },
-          update: {},
-          create: {
-            id: 'test-company',
-            name: 'Test Company',
-          },
-        });
-        await this.prisma.user.upsert({
-          where: { id: 'test-user-demo' },
-          update: {},
-          create: {
-            id: 'test-user-demo',
-            email: 'test-user-demo@example.com',
-            password: 'password',
-            fullName: 'Test User',
-            companyId: 'test-company',
-          },
-        });
-      }
       let conversation = await this.findOrCreateActiveConversation(userId, conversationId);
       await this.saveMessage(conversation.id, MessageRole.USER, message);
 
