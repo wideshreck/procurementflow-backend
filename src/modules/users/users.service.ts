@@ -120,4 +120,12 @@ export class UsersService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  listCompanyUsers(companyId: string) {
+    return this.prisma.user.findMany({
+      where: { companyId },
+      select: publicUserSelect,
+      orderBy: { fullName: 'asc' },
+    });
+  }
 }

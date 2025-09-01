@@ -335,7 +335,7 @@ model Company {
 
 model Category {
   CategoryID       String        @id @default(cuid())
-  categoryCode     String        @unique
+  categoryCode     String
   name             String
   level            Int           @default(1) // 1: Ana, 2: Alt, 3: Detay
   description      String?

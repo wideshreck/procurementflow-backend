@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ZodValidationPipe } from 'nestjs-zod';
 import {
   FastifyAdapter,
   NestFastifyApplication,
@@ -29,6 +30,7 @@ async function bootstrap() {
 
   app.useLogger(app.get(Logger));
   app.setGlobalPrefix('api');
+  app.useGlobalPipes(new ZodValidationPipe());
   app.enableShutdownHooks();
 
   // --- Security Middlewares ---

@@ -1,19 +1,13 @@
-import { IsString, IsNotEmpty, IsOptional, IsArray } from 'class-validator';
+import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
+import { NodeSchema } from './node.dto';
+import { EdgeSchema } from './edge.dto';
 
-export class CreateWorkflowDto {
-  @IsString()
-  @IsNotEmpty()
-  name: string;
+const CreateWorkflowSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  nodes: z.array(NodeSchema),
+  edges: z.array(EdgeSchema),
+});
 
-  @IsString()
-  @IsOptional()
-  description?: string;
-
-  @IsArray()
-  @IsNotEmpty()
-  nodes: any[];
-
-  @IsArray()
-  @IsNotEmpty()
-  edges: any[];
-}
+export class CreateWorkflowDto extends createZodDto(CreateWorkflowSchema) {}
