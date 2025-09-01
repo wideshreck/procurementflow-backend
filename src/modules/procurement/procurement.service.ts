@@ -17,6 +17,42 @@ export class ProcurementService {
     });
   }
 
+  private parseDateFromDDMMYYYY(dateStr: string): Date {
+    // Handle empty or invalid date
+    if (!dateStr || dateStr === '') {
+      // Return current date + 30 days as default
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      return futureDate;
+    }
+    
+    // Handle DD-MM-YYYY format
+    if (dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
+      const [day, month, year] = dateStr.split('-');
+      const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      // Check if the date is valid
+      if (isNaN(parsedDate.getTime())) {
+        const futureDate = new Date();
+        futureDate.setDate(futureDate.getDate() + 30);
+        return futureDate;
+      }
+      
+      return parsedDate;
+    }
+    
+    // Try standard Date parsing
+    const standardDate = new Date(dateStr);
+    if (isNaN(standardDate.getTime())) {
+      // If still invalid, return default future date
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      return futureDate;
+    }
+    
+    return standardDate;
+  }
+
   async create(createProcurementRequestDto: CreateProcurementRequestDto, user: User) {
     const {
       item_title,
@@ -113,7 +149,7 @@ export class ProcurementService {
         deliveryDetails: {
           create: {
             deliveryLocation: delivery_details.delivery_location,
-            dueDate: new Date(delivery_details.due_date),
+            dueDate: this.parseDateFromDDMMYYYY(delivery_details.due_date),
             urgency: delivery_details.urgency,
             additionalNotes: delivery_details.additional_notes,
           },

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException, ForbiddenException, B
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCostCenterDto, UpdateCostCenterDto, CostCenterResponseDto } from './dto/cost-center.dto';
 import { Decimal } from '@prisma/client/runtime/library';
+import * as Papa from 'papaparse';
 
 @Injectable()
 export class CostCentersService {
@@ -298,6 +299,128 @@ export class CostCentersService {
     await this.prisma.costCenter.delete({
       where: { id },
     });
+  }
+
+  async importFromCsv(file: Express.Multer.File, userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { companyId: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
+    const csvData = file.buffer.toString('utf-8');
+    const { data, errors: parseErrors } = Papa.parse(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      transform: (value) => value.trim(),
+    });
+
+    if (parseErrors && parseErrors.length > 0) {
+      throw new BadRequestException('CSV dosyası ayrıştırılamadı');
+    }
+
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [] as any[],
+    };
+
+    for (const [index, row] of (data as any[]).entries()) {
+      try {
+        // Validate required fields
+        if (!row.name || !row.budget || !row.budgetOwnerEmail || !row.departmentName) {
+          results.failed++;
+          results.errors.push({
+            row: index + 2,
+            error: 'Zorunlu alanlar eksik',
+            data: row,
+          });
+          continue;
+        }
+
+        // Find budget owner by email
+        const budgetOwner = await this.prisma.user.findFirst({
+          where: {
+            email: row.budgetOwnerEmail,
+            companyId: user.companyId,
+          },
+        });
+
+        if (!budgetOwner) {
+          results.failed++;
+          results.errors.push({
+            row: index + 2,
+            error: 'Bütçe sahibi bulunamadı',
+            data: row,
+          });
+          continue;
+        }
+
+        // Find department by name
+        const department = await this.prisma.department.findFirst({
+          where: {
+            name: row.departmentName,
+            companyId: user.companyId,
+          },
+        });
+
+        if (!department) {
+          results.failed++;
+          results.errors.push({
+            row: index + 2,
+            error: 'Departman bulunamadı',
+            data: row,
+          });
+          continue;
+        }
+
+        // Check for duplicate
+        const existing = await this.prisma.costCenter.findFirst({
+          where: {
+            name: row.name,
+            companyId: user.companyId,
+          },
+        });
+
+        if (existing) {
+          results.failed++;
+          results.errors.push({
+            row: index + 2,
+            error: 'Maliyet merkezi zaten mevcut',
+            data: row,
+          });
+          continue;
+        }
+
+        // Create cost center
+        await this.prisma.costCenter.create({
+          data: {
+            name: row.name,
+            description: row.description || null,
+            budget: new Decimal(row.budget),
+            remainingBudget: new Decimal(row.budget),
+            spentBudget: new Decimal(0),
+            budgetOwnerId: budgetOwner.id,
+            departmentId: department.id,
+            companyId: user.companyId,
+          },
+        });
+
+        results.success++;
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          row: index + 2,
+          error: error.message,
+          data: row,
+        });
+      }
+    }
+
+    return results;
   }
 
   private mapToCostCenterResponse(costCenter: any): CostCenterResponseDto {

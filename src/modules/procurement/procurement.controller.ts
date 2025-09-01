@@ -32,9 +32,9 @@ export class ProcurementController {
     @CurrentUser() user: User,
   ): Promise<ChatbotResponse> {
     if (chatDto.cancel) {
-      const conversationId = await this.orchestratorService.cancelConversation(user.id);
+      await this.orchestratorService.cancelConversation(user.id);
       return {
-        conversationId,
+        conversationId: undefined, // Signal frontend to clear conversation ID
         response: 'Conversation cancelled successfully.',
         MODE: ChatbotMode.CONVERSATION_CANCELLED,
       };
@@ -63,9 +63,9 @@ export class ProcurementController {
     const testUserId = 'test-user-demo';
 
     if (chatDto.cancel) {
-      const conversationId = await this.orchestratorService.cancelConversation(testUserId);
+      await this.orchestratorService.cancelConversation(testUserId);
       return {
-        conversationId,
+        conversationId: undefined, // Signal frontend to clear conversation ID
         response: 'Conversation cancelled successfully.',
         MODE: ChatbotMode.CONVERSATION_CANCELLED,
       };

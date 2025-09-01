@@ -45,18 +45,34 @@ export class Phase3Service {
             }));
           }
           
-          // Merge with existing conversation data
+          // Get existing conversation data properly
           const existingData = conversation.collectedData as any || {};
-          const phase1Data = existingData?.phase1 || {};
           
+          // Extract phase1 and phase2 data if they exist
+          const phase1Data = existingData.phase1 || existingData;
+          const phase2Data = existingData.phase2 || {};
+          
+          // Build the properly structured merged data
           const mergedData = {
-            ...phase1Data,
-            ...existingData,
+            // Include all phase1 fields at root level for backward compatibility
+            ...(phase1Data.item_title ? phase1Data : {}),
+            // Include phase2 data if exists
+            ...(phase2Data.selected_catalog_item ? { selected_catalog_item: phase2Data.selected_catalog_item } : {}),
+            // Add technical specifications from selected profile
             technical_specifications: selectedProfile.technical_specifications || [],
             selected_profile: selectedProfile.suggestion_name || selectedProfile.item_name,
             // Phase 3'ten gelen estimated_cost_per_unit'i unit_price olarak ata
             unit_price: selectedProfile.estimated_cost_per_unit ? parseFloat(selectedProfile.estimated_cost_per_unit) : null,
-            currency: 'TRY'
+            currency: 'TRY',
+            // Preserve phase structure
+            phase1: phase1Data,
+            phase2: phase2Data,
+            phase3: {
+              technical_specifications: selectedProfile.technical_specifications || [],
+              selected_profile: selectedProfile.suggestion_name || selectedProfile.item_name,
+              unit_price: selectedProfile.estimated_cost_per_unit ? parseFloat(selectedProfile.estimated_cost_per_unit) : null,
+              currency: 'TRY'
+            }
           };
           
           // Update conversation with selected profile data
@@ -66,6 +82,8 @@ export class Phase3Service {
               collectedData: mergedData,
             },
           });
+          
+          this.logger.log(`Updated conversation ${conversation.id} with merged data:`, JSON.stringify(mergedData, null, 2));
           
           return {
             MODE: ChatbotMode.PHASE_THREE_DONE,
@@ -166,16 +184,28 @@ Phase 1 Data:\n${JSON.stringify(
   ): ChatbotResponse {
     this.logger.log('Processing manual technical specifications');
     
-    const collectedData = conversation.collectedData as any;
-    const phase1Data = collectedData?.phase1 || {};
+    const existingData = conversation.collectedData as any || {};
+    const phase1Data = existingData?.phase1 || existingData;
+    const phase2Data = existingData?.phase2 || {};
     
     // Parse technical specifications from the message
     const technicalSpecs = this.parseManualTechnicalSpecsFromMessage(message);
     
-    // Create the final COLLECTED_DATA with all phase information
+    // Create the final COLLECTED_DATA with proper structure
     const finalCollectedData = {
-      ...phase1Data,
+      // Include all phase1 fields at root level for backward compatibility
+      ...(phase1Data.item_title ? phase1Data : {}),
+      // Include phase2 data if exists
+      ...(phase2Data.selected_catalog_item ? { selected_catalog_item: phase2Data.selected_catalog_item } : {}),
+      // Add technical specifications
       technical_specifications: technicalSpecs,
+      // Preserve phase structure
+      phase1: phase1Data,
+      phase2: phase2Data,
+      phase3: {
+        technical_specifications: technicalSpecs,
+        manual_entry: true
+      }
     };
 
     return {
@@ -242,19 +272,42 @@ Phase 1 Data:\n${JSON.stringify(
         collectedData.technical_specifications = this.createFallbackTechnicalSpecs(phase1Data);
       }
       
+      // Get existing data for proper structure
+      const existingData = conversation.collectedData as any || {};
+      
+      // Ensure proper data structure
+      const properlyStructuredData = {
+        ...phase1Data,
+        ...collectedData,
+        phase1: phase1Data,
+        phase2: existingData.phase2 || {},
+        phase3: {
+          technical_specifications: collectedData.technical_specifications,
+          ai_generated: true
+        }
+      };
+      
       return {
         MODE: ChatbotMode.PHASE_THREE_APPROVAL, // Return approval mode to show form
-        COLLECTED_DATA: collectedData,
+        COLLECTED_DATA: properlyStructuredData,
       } as ChatbotResponse;
     }
     
     // If AI didn't generate PHASE_THREE_DONE, create a manual fallback
     this.logger.warn('AI did not generate PHASE_THREE_DONE mode, creating manual fallback');
+    const existingData = conversation.collectedData as any || {};
+    const fallbackSpecs = this.createFallbackTechnicalSpecs(phase1Data);
     return {
       MODE: ChatbotMode.PHASE_THREE_APPROVAL, // Return approval mode to show form
       COLLECTED_DATA: {
         ...phase1Data,
-        technical_specifications: this.createFallbackTechnicalSpecs(phase1Data),
+        technical_specifications: fallbackSpecs,
+        phase1: phase1Data,
+        phase2: existingData.phase2 || {},
+        phase3: {
+          technical_specifications: fallbackSpecs,
+          ai_generated: true
+        }
       },
     } as ChatbotResponse;
   }

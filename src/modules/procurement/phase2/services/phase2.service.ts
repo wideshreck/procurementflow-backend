@@ -37,13 +37,25 @@ export class Phase2Service {
           
           // Merge with existing conversation data
           const existingData = conversation.collectedData as any || {};
+          const phase1Data = existingData.phase1 || existingData;
+          
           const mergedData = {
-            ...existingData,
+            // Include all phase1 fields at root level for backward compatibility
+            ...(phase1Data.item_title ? phase1Data : {}),
             selected_product: selectedData.selected_product,
             technical_specifications: selectedData.technical_specifications || [],
             // Phase 2'den gelen last_updated_price'ı unit_price olarak ata
             unit_price: selectedData.last_updated_price ? parseFloat(selectedData.last_updated_price) : null,
-            currency: 'TRY'
+            currency: 'TRY',
+            // Preserve phase structure
+            phase1: phase1Data,
+            phase2: {
+              selected_product: selectedData.selected_product,
+              technical_specifications: selectedData.technical_specifications || [],
+              unit_price: selectedData.last_updated_price ? parseFloat(selectedData.last_updated_price) : null,
+              currency: 'TRY',
+              selected_catalog_item: selectedData
+            }
           };
           
           // Update conversation with selected data

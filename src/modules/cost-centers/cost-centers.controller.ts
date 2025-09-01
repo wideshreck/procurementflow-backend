@@ -8,6 +8,10 @@ import {
   Delete,
   UseGuards,
   Request,
+  UseInterceptors,
+  UploadedFile,
+  Res,
+  BadRequestException,
 } from '@nestjs/common';
 import { CostCentersService } from './cost-centers.service';
 import { CreateCostCenterDto, UpdateCostCenterDto, CostCenterResponseDto } from './dto/cost-center.dto';
@@ -21,7 +25,12 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import * as Papa from 'papaparse';
 
 @ApiTags('cost-centers')
 @ApiBearerAuth()
@@ -80,5 +89,99 @@ export class CostCentersController {
   @ApiResponse({ status: 409, description: 'Bu maliyet merkezinde harcama yapılmış, silinemez' })
   remove(@Param('id') id: string, @Request() req): Promise<void> {
     return this.costCentersService.remove(id, req.user.id);
+  }
+
+  @Get('template/download')
+  @ApiOperation({ summary: 'CSV şablonunu indir' })
+  @ApiResponse({ status: 200, description: 'CSV şablon dosyası' })
+  async downloadTemplate(@Res() res: Response) {
+    const template = [
+      {
+        name: 'Yazılım Geliştirme Bütçesi',
+        description: 'Yazılım departmanı için yıllık bütçe',
+        budget: '500000',
+        budgetOwnerEmail: 'john.doe@company.com',
+        departmentName: 'Yazılım Geliştirme',
+      },
+      {
+        name: 'Pazarlama Bütçesi',
+        description: 'Pazarlama departmanı için yıllık bütçe',
+        budget: '300000',
+        budgetOwnerEmail: 'jane.smith@company.com',
+        departmentName: 'Pazarlama',
+      },
+      {
+        name: 'İnsan Kaynakları Bütçesi',
+        description: 'İK departmanı için yıllık bütçe',
+        budget: '200000',
+        budgetOwnerEmail: 'hr.manager@company.com',
+        departmentName: 'İnsan Kaynakları',
+      },
+    ];
+
+    const csv = Papa.unparse(template, {
+      header: true,
+      delimiter: ',',
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="maliyet-merkezi-sablonu.csv"');
+    res.send('\uFEFF' + csv); // Add BOM for Excel UTF-8 support
+  }
+
+  @Post('import')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'CSV dosyasından maliyet merkezlerini içe aktar' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async importCsv(@UploadedFile() file: Express.Multer.File, @Request() req) {
+    if (!file) {
+      throw new BadRequestException('CSV dosyası gerekli');
+    }
+
+    if (!file.originalname.endsWith('.csv')) {
+      throw new BadRequestException('Sadece CSV dosyaları kabul edilir');
+    }
+
+    return this.costCentersService.importFromCsv(file, req.user.id);
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Maliyet merkezlerini CSV olarak dışa aktar' })
+  @ApiResponse({ status: 200, description: 'CSV dosyası' })
+  async exportCsv(@Request() req, @Res() res: Response) {
+    const costCenters = await this.costCentersService.findAll(req.user.id);
+    
+    const data = costCenters.map(cc => ({
+      name: cc.name,
+      description: cc.description || '',
+      budget: cc.budget.toString(),
+      remainingBudget: cc.remainingBudget.toString(),
+      spentBudget: cc.spentBudget.toString(),
+      budgetOwnerEmail: cc.budgetOwner.email,
+      budgetOwnerName: cc.budgetOwner.fullName,
+      departmentName: cc.department.name,
+      locationName: cc.department.location?.name || '',
+    }));
+
+    const csv = Papa.unparse(data, {
+      header: true,
+      delimiter: ',',
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="maliyet-merkezleri.csv"');
+    res.send('\uFEFF' + csv); // Add BOM for Excel UTF-8 support
   }
 }

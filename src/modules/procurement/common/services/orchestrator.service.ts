@@ -148,11 +148,19 @@ export class OrchestratorService {
             JSON.stringify(phase2Data),
           );
         } else if (nextPhase === ProcurementPhase.SUPPLIER_PRODUCT_SUGGESTIONS) {
-          this.logger.log('Phase 3 complete, starting Phase 4');
+          // Phase 4 can be reached from both Phase 2 (catalog selection) and Phase 3 (manual specs)
+          const previousPhase = conversation.phase;
+          if (previousPhase === ProcurementPhase.SUGGESTIONS) {
+            this.logger.log('Phase 2 catalog selection complete, starting Phase 4');
+            this.logger.log(`Current collected data before Phase 4: ${JSON.stringify(conversation.collectedData).substring(0, 200)}...`);
+          } else {
+            this.logger.log('Phase 3 complete, starting Phase 4');
+          }
           response = await this.phase4Service.processPhase4(
             conversation.id,
-            "Phase 3 tamamlandı, teslimat bilgilerini alalım",
+            "Teslimat bilgilerini alalım",
           );
+          this.logger.log(`Phase 4 response mode: ${response.MODE}`);
         }
       }
 
@@ -308,11 +316,13 @@ export class OrchestratorService {
     // Handle PHASE_TWO_CATALOG_MATCH and PHASE_TWO_SELECTED
     if (response.MODE === ChatbotMode.PHASE_TWO_CATALOG_MATCH || 
         response.MODE === ChatbotMode.PHASE_TWO_SELECTED) {
+      this.logger.log(`Handling ${response.MODE} - transitioning to Phase 4`);
       if ('COLLECTED_DATA' in response) {
         // Merge catalog data with existing data
         const collectedData = response.COLLECTED_DATA as Record<string, any>;
         newCollectedData = { ...currentData, ...collectedData };
         newCollectedData['phase2'] = collectedData;
+        this.logger.log(`Phase 2 collected data merged: ${JSON.stringify(newCollectedData).substring(0, 200)}...`);
         
         // Preserve technical specifications if they exist and ensure requirement_level is 'Zorunlu'
         if (collectedData.technical_specifications) {
@@ -403,8 +413,9 @@ export class OrchestratorService {
   }
 
   /**
-   * Cancels the active conversation for a user and creates a new one.
-   * @returns The new conversation ID created after cancellation.
+   * Cancels the active conversation for a user.
+   * Does NOT create a new conversation - let the next message trigger that.
+   * @returns undefined to signal frontend to clear its conversation ID
    */
   async cancelConversation(userId: string): Promise<string | undefined> {
     const activeConversation = await this.prisma.conversation.findFirst({
@@ -423,15 +434,13 @@ export class OrchestratorService {
 
       this.logger.log(`Cancelled conversation ${activeConversation.id} for user ${userId}`);
       
-      // Create new conversation for next interaction
-      const newConversation = await this.createNewConversation(userId);
-      this.logger.log(`New conversation created after cancellation: ${newConversation.id}`);
-      return newConversation.id;
+      // Return undefined to signal frontend to clear conversation ID
+      // Next message will create a new conversation automatically
+      return undefined;
     }
     
-    // No active conversation found, create a new one anyway
-    const newConversation = await this.createNewConversation(userId);
-    this.logger.log(`No active conversation found, created new one: ${newConversation.id}`);
-    return newConversation.id;
+    // No active conversation found, return undefined
+    this.logger.log(`No active conversation found for user ${userId}`);
+    return undefined;
   }
 }

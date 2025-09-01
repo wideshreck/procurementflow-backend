@@ -104,6 +104,8 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
           ...collectedData,
         };
         
+        this.logger.log(`Final data being returned: ${JSON.stringify(finalData).substring(0, 300)}...`);
+        
         // Eğer unit_price önceki fazlardan geldiyse, delivery_details'e kopyala
         if (finalData.unit_price && finalData.delivery_details) {
           finalData.delivery_details.unit_price = finalData.unit_price;
