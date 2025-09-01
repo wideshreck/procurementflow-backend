@@ -1,4 +1,8 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateWorkflowDto } from './create-workflow.dto';
+import { createZodDto } from 'nestjs-zod';
+import { WorkflowSchema } from './create-workflow.dto';
 
-export class UpdateWorkflowDto extends PartialType(CreateWorkflowDto) {}
+// Update DTO allows partial updates of the workflow fields.
+export class UpdateWorkflowDto extends createZodDto(
+  WorkflowSchema.partial()
+) {}
+
