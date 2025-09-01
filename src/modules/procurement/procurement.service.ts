@@ -2,10 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProcurementRequestDto } from './dto/create-procurement-request.dto';
 import type { User } from '@prisma/client';
+import { GeminiService } from './common/gemini/gemini.service';
 
 @Injectable()
 export class ProcurementService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private geminiService: GeminiService,
+  ) {}
 
   async findAll() {
     return this.prisma.procurementRequest.findMany({
@@ -156,5 +160,82 @@ export class ProcurementService {
         },
       },
     });
+  }
+
+  async estimatePrice(data: {
+    technical_specifications: any[];
+    item_title: string;
+    quantity: number;
+    currency: string;
+  }): Promise<{ estimatedPrice: number }> {
+    // Create a prompt for price estimation
+    const specsText = data.technical_specifications
+      .map(spec => `${spec.spec_key}: ${spec.spec_value}`)
+      .join(', ');
+    
+    const prompt = `
+You are an expert procurement pricing AI. Based on the following technical specifications, estimate the unit price for this item.
+
+Item: ${data.item_title}
+Quantity: ${data.quantity}
+Currency: ${data.currency}
+Technical Specifications: ${specsText}
+
+Consider current market prices and typical procurement costs for enterprise purchases.
+Provide ONLY a numeric value for the estimated unit price in ${data.currency}, without any currency symbols or text.
+
+For example:
+- If the estimated price is 35000 TRY, respond with: 35000
+- If the estimated price is 1500 USD, respond with: 1500
+- If the estimated price is 2000 EUR, respond with: 2000
+
+Estimated unit price:`;
+
+    try {
+      const response = await this.geminiService.generateResponse({
+        systemPrompt: prompt,
+        history: [],
+        message: 'Estimate the price',
+      });
+      
+      // Parse the AI response
+      let aiResponseData: any;
+      try {
+        aiResponseData = typeof response === 'string' ? JSON.parse(response) : response;
+      } catch (e) {
+        aiResponseData = response;
+      }
+      
+      // Extract the numeric value from the response
+      const responseText = typeof aiResponseData === 'string' ? aiResponseData : JSON.stringify(aiResponseData);
+      const priceMatch = responseText.match(/\d+\.?\d*/);
+      const estimatedPrice = priceMatch ? parseFloat(priceMatch[0]) : 0;
+      
+      // Apply some reasonable bounds based on currency
+      let minPrice = 100;
+      let maxPrice = 1000000;
+      
+      if (data.currency === 'TRY') {
+        minPrice = 1000;
+        maxPrice = 5000000;
+      } else if (data.currency === 'USD' || data.currency === 'EUR') {
+        minPrice = 50;
+        maxPrice = 100000;
+      }
+      
+      // Ensure the price is within reasonable bounds
+      const finalPrice = Math.max(minPrice, Math.min(maxPrice, estimatedPrice || minPrice));
+      
+      return { estimatedPrice: finalPrice };
+    } catch (error) {
+      console.error('Error estimating price:', error);
+      // Return a default price based on currency
+      const defaultPrices = {
+        TRY: 25000,
+        USD: 1000,
+        EUR: 900,
+      };
+      return { estimatedPrice: defaultPrices[data.currency] || 1000 };
+    }
   }
 }

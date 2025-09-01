@@ -118,4 +118,21 @@ export class ProcurementController {
   create(@Body() createProcurementRequestDto: CreateProcurementRequestDto, @CurrentUser() user: User) {
     return this.procurementService.create(createProcurementRequestDto, user);
   }
+
+  @Post('estimate-price')
+  @ApiOperation({ summary: 'Estimate price using AI based on technical specifications' })
+  @ApiResponse({ status: 200, description: 'Price estimated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  async estimatePrice(
+    @Body() data: {
+      technical_specifications: any[];
+      item_title: string;
+      quantity: number;
+      currency: string;
+    },
+    @CurrentUser() user: User,
+  ): Promise<{ estimatedPrice: number }> {
+    return this.procurementService.estimatePrice(data);
+  }
 }
