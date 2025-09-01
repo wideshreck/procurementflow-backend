@@ -104,6 +104,12 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
           ...collectedData,
         };
         
+        // Eğer unit_price önceki fazlardan geldiyse, delivery_details'e kopyala
+        if (finalData.unit_price && finalData.delivery_details) {
+          finalData.delivery_details.unit_price = finalData.unit_price;
+          finalData.delivery_details.currency = finalData.currency || 'TRY';
+        }
+        
         // Total price'ı hesapla
         if (finalData.delivery_details && finalData.delivery_details.unit_price && finalData.quantity) {
           finalData.delivery_details.total_price = finalData.delivery_details.unit_price * parseFloat(finalData.quantity);
@@ -222,7 +228,14 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
     }
     
     const deliveryDetails = data.delivery_details;
-    const required = ['delivery_location', 'due_date', 'urgency', 'unit_price', 'currency'];
+    const required = ['delivery_location', 'due_date', 'urgency'];
+    
+    // Eğer unit_price önceki fazlardan gelmediyse, Phase 4'te sorulmalı
+    const hasUnitPrice = data.unit_price || deliveryDetails.unit_price;
+    if (!hasUnitPrice) {
+      required.push('unit_price');
+      required.push('currency');
+    }
     
     return required.every(field => 
       deliveryDetails[field] !== undefined && 

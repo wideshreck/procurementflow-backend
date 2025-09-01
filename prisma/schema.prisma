@@ -235,7 +235,7 @@ model Supplier {
   email              String?
   website            String?
   status             SupplierStatus       @default(PENDING)
-  rating             Float?               @db.Real
+  rating             Decimal?
   companyId          String
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -244,6 +244,9 @@ model Supplier {
   documents          SupplierDocument[]
   supplierProducts   SupplierProduct[]
   supplierServices   SupplierService[]
+  meetingNotes       MeetingNote[]
+  contracts          Contract[]
+  emails             Email[]
 
   @@index([companyId, status])
 }
@@ -332,8 +335,8 @@ model Company {
 
 model Category {
   CategoryID       String        @id @default(cuid())
-  categoryCode     String        @unique
-  name             String        @unique
+  categoryCode     String
+  name             String
   level            Int           @default(1) // 1: Ana, 2: Alt, 3: Detay
   description      String?
   color            CategoryColor @default(BLUE)
@@ -350,6 +353,7 @@ model Category {
   services         Service[]
   procurementRequests ProcurementRequest[]
 
+  @@unique([companyId, name, ParentCategoryID])
   @@index([companyId, isActive])
   @@index([ParentCategoryID])
 }
@@ -496,13 +500,13 @@ model ProcurementRequest {
   justification           String
   status                  RequestStatus            @default(DRAFT)
   currency                String                   @default("TRY")
-  unitPrice               Float                    @default(0)
-  totalPrice              Float                    @default(0)
+  unitPrice               Decimal                  @default(0) @db.Money
+  totalPrice              Decimal                  @default(0) @db.Money
   auditTrail              Json[]
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
-  categoryId              String
-  category                Category                 @relation(fields: [categoryId], references: [CategoryID])
+  categoryId              String?
+  category                Category?                @relation(fields: [categoryId], references: [CategoryID])
   deliveryDetails         DeliveryDetail?
   technicalSpecifications TechnicalSpecification[]
   workflowInstance        WorkflowInstance?
@@ -585,4 +589,46 @@ enum WorkflowStatus {
   COMPLETED
   REJECTED
   CANCELLED
+}
+
+model MeetingNote {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  date        DateTime
+  supplierId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+model Contract {
+  id          String   @id @default(cuid())
+  title       String
+  filePath    String
+  startDate   DateTime
+  endDate     DateTime
+  supplierId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+model Email {
+  id          String   @id @default(cuid())
+  subject     String
+  body        String
+  from        String
+  to          String
+  date        DateTime
+  supplierId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
 }

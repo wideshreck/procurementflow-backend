@@ -135,7 +135,11 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
 \`\`\`
 
 ## TAMAMLANMA KOŞULU
-Tüm gerekli bilgiler (delivery_location, due_date, urgency, unit_price, currency) toplandığında:
+Aşağıdaki bilgiler toplandığında:
+- delivery_location, due_date, urgency (her zaman gerekli)
+- unit_price ve currency (SADECE önceki fazlardan gelmediyse sor)
+
+Eğer MEVCUT VERİLER içinde unit_price varsa, kullanıcıdan unit_price isteme.
 - MODE: "PHASE_FOUR_DONE" olarak ayarla
 - COLLECTED_DATA'da tüm verileri topla
 

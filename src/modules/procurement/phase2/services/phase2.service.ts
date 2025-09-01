@@ -40,7 +40,10 @@ export class Phase2Service {
           const mergedData = {
             ...existingData,
             selected_product: selectedData.selected_product,
-            technical_specifications: selectedData.technical_specifications || []
+            technical_specifications: selectedData.technical_specifications || [],
+            // Phase 2'den gelen last_updated_price'ı unit_price olarak ata
+            unit_price: selectedData.last_updated_price ? parseFloat(selectedData.last_updated_price) : null,
+            currency: 'TRY'
           };
           
           // Update conversation with selected data

@@ -53,7 +53,10 @@ export class Phase3Service {
             ...phase1Data,
             ...existingData,
             technical_specifications: selectedProfile.technical_specifications || [],
-            selected_profile: selectedProfile.suggestion_name || selectedProfile.item_name
+            selected_profile: selectedProfile.suggestion_name || selectedProfile.item_name,
+            // Phase 3'ten gelen estimated_cost_per_unit'i unit_price olarak ata
+            unit_price: selectedProfile.estimated_cost_per_unit ? parseFloat(selectedProfile.estimated_cost_per_unit) : null,
+            currency: 'TRY'
           };
           
           // Update conversation with selected profile data

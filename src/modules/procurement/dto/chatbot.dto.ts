@@ -112,6 +112,10 @@ class SuggestionDto {
   estimated_cost_per_unit?: number; // Used in Phase 3
 
   @IsString()
+  @IsOptional()
+  last_updated_price?: string; // Used in Phase 2 for catalog suggestions
+
+  @IsString()
   @IsNotEmpty()
   justification: string;
 
