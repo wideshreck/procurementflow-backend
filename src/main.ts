@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ZodValidationPipe } from 'nestjs-zod';
 import {
   FastifyAdapter,
   NestFastifyApplication,
@@ -13,6 +14,7 @@ import fastifyCors from '@fastify/cors';
 import { fastify } from 'fastify';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyCookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
 
 async function bootstrap() {
   patchNestJsSwagger();
@@ -28,6 +30,7 @@ async function bootstrap() {
 
   app.useLogger(app.get(Logger));
   app.setGlobalPrefix('api');
+  app.useGlobalPipes(new ZodValidationPipe());
   app.enableShutdownHooks();
 
   // --- Security Middlewares ---
@@ -46,6 +49,8 @@ async function bootstrap() {
   await app.register(fastifyCookie, {
     secret: process.env.COOKIE_SECRET || 'a-secure-secret-for-cookie-signing',
   });
+
+  await app.register(multipart);
 
   // Empty body handler for specific endpoints
   await app.register(async function (fastify) {

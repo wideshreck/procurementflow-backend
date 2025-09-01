@@ -10,6 +10,7 @@ import {
   DefaultValuePipe,
   HttpCode,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -112,5 +113,16 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateRole(@Param('id') id: string, @Body() dto: UpdateUserRoleDto) {
     return this.users.updateUserRole(id, dto.role);
+  }
+
+  @Get('company')
+  @ApiOperation({ summary: 'List all users in the current user company' })
+  @ApiResponse({
+    status: 200,
+    description: 'A list of users in the company (without sensitive fields)',
+  })
+  async listCompanyUsers(@Req() req) {
+    const companyId = req.user.companyId;
+    return this.users.listCompanyUsers(companyId);
   }
 }

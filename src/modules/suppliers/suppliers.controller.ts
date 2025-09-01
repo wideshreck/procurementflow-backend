@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierInput } from './dto/create-supplier.input';
 import { UpdateSupplierInput } from './dto/update-supplier.input';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { FastifyFileInterceptor } from '../../common/interceptors/fastify-file-interceptor';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @UseGuards(JwtAuthGuard)
 @Controller('suppliers')
@@ -40,7 +40,7 @@ export class SuppliersController {
   }
 
   @Post(':id/upload')
-  @UseInterceptors(FileInterceptor('file', {
+  @UseInterceptors(FastifyFileInterceptor('file', {
     storage: diskStorage({
       destination: './uploads',
       filename: (req, file, cb) => {
@@ -49,12 +49,19 @@ export class SuppliersController {
       },
     }),
   }))
-  uploadFile(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+  uploadFile(@Param('id') id: string, @UploadedFile(
+    new ParseFilePipe({
+      validators: [
+        new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 5 }), // 5MB
+        new FileTypeValidator({ fileType: '.(png|jpeg|jpg|pdf|doc|docx|xls|xlsx)' }),
+      ],
+    }),
+  ) file: Express.Multer.File) {
     return this.suppliersService.addDocument(id, file.filename, file.path, file.mimetype);
   }
 
   @Post(':id/photo')
-  @UseInterceptors(FileInterceptor('file', {
+  @UseInterceptors(FastifyFileInterceptor('file', {
     storage: diskStorage({
       destination: './uploads/photos',
       filename: (req, file, cb) => {
@@ -63,7 +70,14 @@ export class SuppliersController {
       },
     }),
   }))
-  uploadPhoto(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+  uploadPhoto(@Param('id') id: string, @UploadedFile(
+    new ParseFilePipe({
+      validators: [
+        new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 2 }), // 2MB
+        new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
+      ],
+    }),
+  ) file: Express.Multer.File) {
     return this.suppliersService.updatePhoto(id, file.path);
   }
 }
