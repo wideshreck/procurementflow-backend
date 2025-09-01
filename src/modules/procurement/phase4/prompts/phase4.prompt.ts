@@ -84,7 +84,7 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
         {
             "question_id": "unit_price_q4",
             "question_type": "NUMBER",
-            "question_text": "Birim fiyat nedir?"
+            "question_text": "Tahmini Birim fiyat nedir?"
         },
         {
             "question_id": "currency_q5",
@@ -104,14 +104,22 @@ Faz 3 tamamlandı. Teknik özellikler belirlendi. Şimdi teslimat koordinasyonu 
     "MODE": "PHASE_FOUR_DONE",
     "COLLECTED_DATA": {
         "item_title": "Yazılım Geliştirme Departmanı için 5 Adet Yüksek Performanslı Dizüstü Bilgisayar",
-        "category": "IT Donanım",
-        "subcategory": "Dizüstü Bilgisayarlar",
         "quantity": 5,
         "uom": "Adet",
         "simple_definition": "Mevcut makinelerin derleme sürelerini kısaltmak ve sanallaştırma performansını artırmak.",
-        "cost_center": "DEV-2025-A01",
         "procurement_type": "Ürün Alımı",
-        "justification": "Yoğun grafik ve veri işleme görevleri için tasarlanmış, geleceğe dönük bir konfigürasyondur.",
+        "request_justification": "Yoğun grafik ve veri işleme görevleri için tasarlanmış, geleceğe dönük bir konfigürasyondur.",
+        "category": {
+            "category_id": "cat-3-1",
+            "category_name": "Bilgisayar ve Aksesuar"
+        },
+        "cost_center": {
+            "cost_center_id": "DEV-2025-A01",
+            "cost_center_name": "Yazılım Geliştirme Departmanı",
+            "cost_center_budget": 800000,
+            "cost_center_spent_budget": 250000,
+            "cost_center_remaining_budget": 550000
+        },
         "technical_specifications": [
             { "spec_key": "İşlemci", "spec_value": "En az 8 performans çekirdeğine sahip, 13. Nesil Intel Core i7 veya AMD Ryzen 7 7000 serisi veya üstü", "requirement_level": "Zorunlu" },
             { "spec_key": "Bellek (RAM)", "spec_value": "32 GB DDR5 4800MHz, çift kanal", "requirement_level": "Zorunlu" },

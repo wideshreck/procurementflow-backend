@@ -158,12 +158,34 @@ export class SuggestionForPredefinedProfilesResponseDto {
 
 // --- Data Structures for Phase Completions ---
 
+class CategoryDto {
+  @IsString()
+  category_id: string;
+
+  @IsString()
+  category_name: string;
+}
+
+class CostCenterDto {
+  @IsString()
+  cost_center_id: string;
+
+  @IsString()
+  cost_center_name: string;
+
+  @IsNumber()
+  cost_center_budget: number;
+
+  @IsNumber()
+  cost_center_spent_budget: number;
+
+  @IsNumber()
+  cost_center_remaining_budget: number;
+}
+
 class Phase1CollectedDataDto {
   @IsString()
   item_title: string;
-
-  @IsString()
-  category_id: string; // Kategori ID (cat-1, cat-1-1, vb.)
 
   @IsNumber()
   quantity: number;
@@ -176,13 +198,18 @@ class Phase1CollectedDataDto {
   simple_definition?: string;
 
   @IsString()
-  cost_center: string;
-
-  @IsString()
   procurement_type: 'Ürün Alımı' | 'Hizmet Alımı';
 
   @IsString()
   request_justification: string;
+
+  @ValidateNested()
+  @Type(() => CategoryDto)
+  category: CategoryDto;
+
+  @ValidateNested()
+  @Type(() => CostCenterDto)
+  cost_center: CostCenterDto;
 }
 
 export class PhaseOneDoneResponseDto {

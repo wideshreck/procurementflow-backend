@@ -5,14 +5,36 @@ export enum ProcurementType {
   SERVICE = 'Hizmet Alımı'
 }
 
+export class CategoryDto {
+  @IsString()
+  category_id: string;
+
+  @IsString()
+  category_name: string;
+}
+
+export class CostCenterDto {
+  @IsString()
+  cost_center_id: string;
+
+  @IsString()
+  cost_center_name: string;
+
+  @IsNumber()
+  cost_center_budget: number;
+
+  @IsNumber()
+  cost_center_spent_budget: number;
+
+  @IsNumber()
+  cost_center_remaining_budget: number;
+}
+
 export class Phase1DataDto {
   @IsString()
   @Min(10)
   @MaxLength(255)
   item_title: string;
-
-  @IsString()
-  category_id: string;
 
   @IsNumber()
   quantity: number;
@@ -25,15 +47,16 @@ export class Phase1DataDto {
   @MaxLength(500)
   simple_definition?: string;
 
-  @IsString()
-  cost_center: string;
-
   @IsEnum(ProcurementType)
   procurement_type: ProcurementType;
 
   @IsString()
   @MaxLength(500)
   request_justification: string;
+
+  category: CategoryDto;
+
+  cost_center: CostCenterDto;
 }
 
 export class Phase1QuestionDto {

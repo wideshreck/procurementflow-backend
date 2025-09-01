@@ -3,8 +3,6 @@ import { PrismaService } from '../../../../prisma/prisma.service';
 import { GeminiService } from '../../common/gemini/gemini.service';
 import { Phase1DataDto, Phase1ResponseDto } from '../dto/phase1.dto';
 import { PHASE1_SYSTEM_PROMPT } from '../prompts/phase1.prompt';
-import { CATEGORIES } from '../../common/data/categories.data';
-import { COST_CENTERS } from '../../common/data/cost-centers.data';
 import { Conversation } from '@prisma/client';
 
 @Injectable()
@@ -47,8 +45,50 @@ export class Phase1Service {
     });
     const currentData = conversation ? conversation.collectedData : {};
 
-    const categoriesString = JSON.stringify(CATEGORIES, null, 2);
-    const costCentersString = JSON.stringify(COST_CENTERS, null, 2);
+    // Database'den gerçek kategori ve cost center verilerini çek
+    const categories = await this.prisma.category.findMany({
+      where: { isActive: true },
+      select: {
+        CategoryID: true,
+        categoryCode: true,
+        name: true,
+        description: true,
+      }
+    });
+
+    const costCenters = await this.prisma.costCenter.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        budget: true,
+        spentBudget: true,
+        remainingBudget: true,
+        department: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+
+    // Format data for AI prompt
+    const categoriesString = JSON.stringify(categories.map(cat => ({
+      category_id: cat.CategoryID,
+      category_code: cat.categoryCode,
+      category_name: cat.name,
+      description: cat.description
+    })), null, 2);
+
+    const costCentersString = JSON.stringify(costCenters.map(cc => ({
+      cost_center_id: cc.id,
+      cost_center_name: cc.name,
+      department: cc.department?.name,
+      description: cc.description,
+      cost_center_budget: cc.budget,
+      cost_center_spent_budget: cc.spentBudget,
+      cost_center_remaining_budget: cc.remainingBudget
+    })), null, 2);
 
     // Conversation analysis
     const hasRequestJustificationQuestion = history.some(msg => 
