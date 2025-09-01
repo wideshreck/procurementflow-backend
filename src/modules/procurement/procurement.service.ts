@@ -71,9 +71,29 @@ export class ProcurementService {
       totalPrice,
       technical_specifications,
       delivery_details,
-      status,
-      audit_trail,
     } = createProcurementRequestDto;
+
+    // Set default status and create audit trail automatically
+    const status = 'DRAFT';
+    const now = new Date().toISOString();
+    const audit_trail = {
+      created_by: user.id,
+      created_at: now,
+      last_modified_by: user.id,
+      last_modified_at: now,
+      phase_completion_times: {
+        phase1_completed_at: now,
+        phase2_completed_at: now,
+        phase3_completed_at: now,
+        phase4_completed_at: now,
+      },
+      requester_info: {
+        user_id: user.id,
+        user_name: user.name || 'Unknown User',
+        user_email: user.email,
+        department: user.department || 'General',
+      }
+    };
 
     // Check if category exists, if not create a default one or skip the validation
     let categoryRecord: any = null;
@@ -140,7 +160,7 @@ export class ProcurementService {
         unitPrice,
         totalPrice,
         status,
-        // userId: user.id, // User relation will be added later
+        userId: user.id,
         auditTrail: audit_trail as any,
         technicalSpecifications: {
           create: technical_specifications.map(spec => ({
