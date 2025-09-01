@@ -89,7 +89,7 @@ export class ProcurementService {
       },
       requester_info: {
         user_id: user.id,
-        user_name: user.fullName || 'Unknown User',
+        user_name: user.name || 'Unknown User',
         user_email: user.email,
         department: user.department || 'General',
       }
@@ -160,6 +160,7 @@ export class ProcurementService {
         unitPrice,
         totalPrice,
         status,
+        userId: user.id,
         auditTrail: audit_trail as any,
         technicalSpecifications: {
           create: technical_specifications.map(spec => ({
