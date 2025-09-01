@@ -167,29 +167,35 @@ export class ProcurementService {
     item_title: string;
     quantity: number;
     currency: string;
-  }): Promise<{ estimatedPrice: number }> {
+  }): Promise<{ estimatedPrice: number; currency: string }> {
     // Create a prompt for price estimation
     const specsText = data.technical_specifications
       .map(spec => `${spec.spec_key}: ${spec.spec_value}`)
       .join(', ');
     
     const prompt = `
-You are an expert procurement pricing AI. Based on the following technical specifications, estimate the unit price for this item.
+You are an expert procurement pricing AI. Based on the following technical specifications, estimate the unit price and determine the most appropriate currency for this item.
 
 Item: ${data.item_title}
 Quantity: ${data.quantity}
-Currency: ${data.currency}
 Technical Specifications: ${specsText}
 
-Consider current market prices and typical procurement costs for enterprise purchases.
-Provide ONLY a numeric value for the estimated unit price in ${data.currency}, without any currency symbols or text.
+Consider:
+1. Current market prices and typical procurement costs for enterprise purchases
+2. The origin/brand of the product (if international brands like Apple, Dell, HP suggest USD/EUR)
+3. Local products or services should use TRY
+4. High-tech equipment is often priced in USD or EUR
 
-For example:
-- If the estimated price is 35000 TRY, respond with: 35000
-- If the estimated price is 1500 USD, respond with: 1500
-- If the estimated price is 2000 EUR, respond with: 2000
+Respond with a JSON object containing:
+- price: numeric value only (no currency symbols)
+- currency: one of TRY, USD, or EUR
 
-Estimated unit price:`;
+Example responses:
+{"price": 35000, "currency": "TRY"}
+{"price": 1500, "currency": "USD"}
+{"price": 2000, "currency": "EUR"}
+
+Response:`;
 
     try {
       const response = await this.geminiService.generateResponse({
@@ -199,26 +205,46 @@ Estimated unit price:`;
       });
       
       // Parse the AI response
-      let aiResponseData: any;
+      let parsedResponse: { price?: number; currency?: string } = {};
+      let estimatedPrice = 0;
+      let estimatedCurrency = data.currency; // Default to requested currency
+      
       try {
-        aiResponseData = typeof response === 'string' ? JSON.parse(response) : response;
+        // Try to parse as JSON first
+        const responseText = typeof response === 'string' ? response : JSON.stringify(response);
+        
+        // Extract JSON from response (AI might include extra text)
+        const jsonMatch = responseText.match(/\{[^}]*\}/);
+        if (jsonMatch) {
+          parsedResponse = JSON.parse(jsonMatch[0]);
+          estimatedPrice = parsedResponse.price || 0;
+          estimatedCurrency = parsedResponse.currency || data.currency;
+        } else {
+          // Fallback: extract number from response
+          const priceMatch = responseText.match(/\d+\.?\d*/);
+          estimatedPrice = priceMatch ? parseFloat(priceMatch[0]) : 0;
+        }
       } catch (e) {
-        aiResponseData = response;
+        // Fallback: extract number from response
+        const responseText = typeof response === 'string' ? response : JSON.stringify(response);
+        const priceMatch = responseText.match(/\d+\.?\d*/);
+        estimatedPrice = priceMatch ? parseFloat(priceMatch[0]) : 0;
       }
       
-      // Extract the numeric value from the response
-      const responseText = typeof aiResponseData === 'string' ? aiResponseData : JSON.stringify(aiResponseData);
-      const priceMatch = responseText.match(/\d+\.?\d*/);
-      const estimatedPrice = priceMatch ? parseFloat(priceMatch[0]) : 0;
+      // Validate currency
+      const validCurrencies = ['TRY', 'USD', 'EUR'];
+      if (!validCurrencies.includes(estimatedCurrency)) {
+        estimatedCurrency = 'TRY'; // Default to TRY if invalid
+      }
       
-      // Apply some reasonable bounds based on currency
+      // Apply reasonable bounds based on currency
       let minPrice = 100;
       let maxPrice = 1000000;
       
-      if (data.currency === 'TRY') {
+      if (estimatedCurrency === 'TRY') {
         minPrice = 1000;
         maxPrice = 5000000;
-      } else if (data.currency === 'USD' || data.currency === 'EUR') {
+      } else if (estimatedCurrency === 'USD' || estimatedCurrency === 'EUR') {
         minPrice = 50;
         maxPrice = 100000;
       }
@@ -226,7 +252,10 @@ Estimated unit price:`;
       // Ensure the price is within reasonable bounds
       const finalPrice = Math.max(minPrice, Math.min(maxPrice, estimatedPrice || minPrice));
       
-      return { estimatedPrice: finalPrice };
+      return { 
+        estimatedPrice: finalPrice,
+        currency: estimatedCurrency
+      };
     } catch (error) {
       console.error('Error estimating price:', error);
       // Return a default price based on currency
@@ -235,7 +264,10 @@ Estimated unit price:`;
         USD: 1000,
         EUR: 900,
       };
-      return { estimatedPrice: defaultPrices[data.currency] || 1000 };
+      return { 
+        estimatedPrice: defaultPrices[data.currency] || 1000,
+        currency: data.currency || 'TRY'
+      };
     }
   }
 }

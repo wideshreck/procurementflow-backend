@@ -132,7 +132,7 @@ export class ProcurementController {
       currency: string;
     },
     @CurrentUser() user: User,
-  ): Promise<{ estimatedPrice: number }> {
+  ): Promise<{ estimatedPrice: number; currency: string }> {
     return this.procurementService.estimatePrice(data);
   }
 }
