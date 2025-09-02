@@ -160,7 +160,7 @@ export class ProcurementService {
         unitPrice,
         totalPrice,
         status,
-        auditTrail: audit_trail as any,
+        auditTrail: [audit_trail] as any,
         technicalSpecifications: {
           create: technical_specifications.map(spec => ({
             specKey: spec.spec_key,
