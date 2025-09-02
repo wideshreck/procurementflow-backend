@@ -7,7 +7,7 @@ import { EdgeDto } from './dto/edge.dto';
 import { z } from 'zod';
 
 const ProcurementRequestNodeDataSchema = z.object({
-  department: z.string(),
+  requesterDepartment: z.string(),
 });
 
 const ConditionIfElseNodeDataSchema = z.object({
@@ -44,16 +44,16 @@ export class WorkflowService {
 
   private validateWorkflow(nodes: NodeDto[], edges: EdgeDto[]) {
     // 1. Start node required
-    const startNode = nodes.find((node) => node.type === 'procurement-request');
+    const startNode = nodes.find((node) => node.type === 'purchaseRequest');
     if (!startNode) {
-      throw new BadRequestException('Workflow must have a "procurement-request" start node.');
+      throw new BadRequestException('Workflow must have a "purchaseRequest" start node.');
     }
 
     // 2. Node data validation
     for (const node of nodes) {
       try {
         switch (node.type) {
-          case 'procurement-request':
+          case 'purchaseRequest':
             ProcurementRequestNodeDataSchema.parse(node.data);
             break;
           case 'condition-if-else':
@@ -80,30 +80,11 @@ export class WorkflowService {
       }
     }
 
-    // 3. No dangling outputs
-    const connectedOutputs = new Set<string>();
-    edges.forEach((edge) => {
-      connectedOutputs.add(`${edge.source}:${edge.sourceHandle}`);
-    });
-
-    for (const node of nodes) {
-      const expectedOutputs = this.getExpectedOutputHandles(node);
-      if (node.type === 'condition-case') {
-        // For case nodes, not all outputs must be connected.
-        continue;
-      }
-
-      for (const outputHandle of expectedOutputs) {
-        if (!connectedOutputs.has(`${node.id}:${outputHandle}`)) {
-          throw new BadRequestException(`Output "${outputHandle}" of node ${node.id} is not connected.`);
-        }
-      }
-    }
   }
 
   private getExpectedOutputHandles(node: NodeDto): string[] {
     switch (node.type) {
-      case 'procurement-request':
+      case 'purchaseRequest':
         return ['totalCost', 'unitCost', 'quantity', 'urgency', 'deadline', 'category'];
       case 'condition-if-else':
         return ['yes', 'no'];
