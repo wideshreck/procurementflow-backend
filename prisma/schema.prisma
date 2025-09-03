@@ -32,13 +32,13 @@ model User {
   locationContacts        Location[]               @relation("LocationContact")
   loginAttempts           LoginAttempt[]
   passwordResets          PasswordReset[]
+  purchaseOrders          PurchaseOrder[]
   refreshTokens           RefreshToken[]
   sessions                Session[]
-  twoFactorAuth           TwoFactorAuth?
-  company                 Company                  @relation("UserCompany", fields: [companyId], references: [id])
   supplierDocuments       SupplierDocument[]
   supplierMeetingNotes    SupplierMeetingNote[]
-  purchaseOrders          PurchaseOrder[]
+  twoFactorAuth           TwoFactorAuth?
+  company                 Company                  @relation("UserCompany", fields: [companyId], references: [id])
 
   @@index([email])
   @@index([isActive, emailVerified])
@@ -237,9 +237,9 @@ model Company {
   locations   Location[]
   products    Product[]
   services    Service[]
+  suppliers   Supplier[]
   users       User[]       @relation("UserCompany")
   workflows   Workflow[]
-  suppliers   Supplier[]
 
   @@index([name])
 }
@@ -408,6 +408,153 @@ model WorkflowInstance {
   @@index([procurementRequestId])
 }
 
+model Supplier {
+  id                  String                @id @default(cuid())
+  companyId           String
+  logoUrl             String?
+  companyName         String
+  brandName           String?
+  description         String?
+  country             String
+  city                String
+  district            String
+  postalCode          String?
+  address             String
+  website             String?
+  taxOffice           String
+  taxNumber           String                @unique
+  supplierType        SupplierType
+  status              SupplierStatus        @default(PENDING_APPROVAL)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  purchaseOrders      PurchaseOrder[]
+  company             Company               @relation(fields: [companyId], references: [id])
+  categories          SupplierCategory[]
+  contacts            SupplierContact[]
+  customFields        SupplierCustomField[]
+  documents           SupplierDocument[]
+  notes               SupplierMeetingNote[]
+  productsAndServices SupplierProduct[]
+
+  @@index([companyId])
+  @@index([companyId, status])
+}
+
+model SupplierContact {
+  id         String      @id @default(cuid())
+  supplierId String
+  fullName   String
+  email      String
+  phone      String?
+  title      String
+  role       ContactRole
+  supplier   Supplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+model SupplierDocument {
+  id           String       @id @default(cuid())
+  supplierId   String
+  title        String
+  documentType DocumentType
+  fileUrl      String
+  uploadedAt   DateTime     @default(now())
+  uploadedById String
+  validUntil   DateTime?
+  supplier     Supplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+
+  @@index([supplierId])
+  @@index([uploadedById])
+}
+
+model SupplierMeetingNote {
+  id           String   @id @default(cuid())
+  supplierId   String
+  meetingDate  DateTime
+  title        String
+  participants String
+  notes        String
+  createdById  String
+  createdBy    User     @relation(fields: [createdById], references: [id])
+  supplier     Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([createdById])
+}
+
+model SupplierCustomField {
+  id         String   @id @default(cuid())
+  supplierId String
+  fieldName  String
+  fieldValue String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+model SupplierCategory {
+  supplierId String
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [CategoryID])
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+
+  @@id([supplierId, categoryId])
+}
+
+model SupplierProduct {
+  id                 String              @id @default(cuid())
+  supplierId         String
+  name               String
+  sku                String?
+  technicalSpecs     String?
+  unit               String
+  purchaseOrderItems PurchaseOrderItem[]
+  supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+model PurchaseOrder {
+  id               String              @id @default(cuid())
+  supplierId       String
+  orderNumber      String              @unique
+  orderDate        DateTime
+  expectedDelivery DateTime
+  actualDelivery   DateTime?
+  status           PurchaseOrderStatus @default(CREATED)
+  totalAmount      Decimal             @db.Money
+  currency         String
+  createdById      String
+  notes            String?
+  createdBy        User                @relation(fields: [createdById], references: [id])
+  supplier         Supplier            @relation(fields: [supplierId], references: [id])
+  items            PurchaseOrderItem[]
+
+  @@index([supplierId])
+  @@index([createdById])
+}
+
+model PurchaseOrderItem {
+  id              String          @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  productName     String
+  quantity        Int
+  unit            String
+  unitPrice       Decimal         @db.Money
+  vatRate         Float
+  discountRate    Float           @default(0)
+  totalPrice      Decimal         @db.Money
+  status          OrderItemStatus @default(PENDING)
+  product         SupplierProduct @relation(fields: [productId], references: [id])
+  purchaseOrder   PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+}
+
 enum Role {
   USER
   ADMIN
@@ -495,164 +642,6 @@ enum WorkflowStatus {
   COMPLETED
   REJECTED
   CANCELLED
-}
-
-// --- TEDARIKÇI YÖNETIM SAYFASI VERI MIMARISI ---
-
-// 1. Ana Tedarikçi Bilgileri
-model Supplier {
-  id                  String                  @id @default(cuid())
-  companyId           String
-  logoUrl             String?
-  companyName         String
-  brandName           String?
-  description         String?
-  country             String
-  city                String
-  district            String
-  postalCode          String?
-  address             String
-  website             String?
-  taxOffice           String
-  taxNumber           String                  @unique
-  supplierType        SupplierType
-  status              SupplierStatus          @default(PENDING_APPROVAL)
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
-  company             Company                 @relation(fields: [companyId], references: [id])
-  contacts            SupplierContact[]
-  documents           SupplierDocument[]
-  notes               SupplierMeetingNote[]
-  customFields        SupplierCustomField[]
-  categories          SupplierCategory[]
-  productsAndServices SupplierProduct[]
-  purchaseOrders      PurchaseOrder[]
-
-  @@index([companyId])
-  @@index([companyId, status])
-}
-
-// 2. İlgili Kişiler
-model SupplierContact {
-  id         String   @id @default(cuid())
-  supplierId String
-  fullName   String
-  email      String
-  phone      String?
-  title      String
-  role       ContactRole
-  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-
-  @@index([supplierId])
-}
-
-// 3. Doküman Yönetimi
-model SupplierDocument {
-  id           String       @id @default(cuid())
-  supplierId   String
-  title        String
-  documentType DocumentType
-  fileUrl      String
-  uploadedAt   DateTime     @default(now())
-  uploadedById String
-  validUntil   DateTime?
-  supplier     Supplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
-
-  @@index([supplierId])
-  @@index([uploadedById])
-}
-
-// 4. Toplantı Notları
-model SupplierMeetingNote {
-  id           String   @id @default(cuid())
-  supplierId   String
-  meetingDate  DateTime
-  title        String
-  participants String
-  notes        String
-  createdById  String
-  supplier     Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  createdBy    User     @relation(fields: [createdById], references: [id])
-
-  @@index([supplierId])
-  @@index([createdById])
-}
-
-// 5. Organizasyon Bilgileri (Özelleştirilebilir Alanlar)
-model SupplierCustomField {
-  id         String   @id @default(cuid())
-  supplierId String
-  fieldName  String
-  fieldValue String
-  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-
-  @@index([supplierId])
-}
-
-// 6. Ürün / Hizmet Sağladığı Kategoriler
-model SupplierCategory {
-  supplierId String
-  categoryId String
-  supplier   Supplier @relation(fields: [supplierId], references: [id])
-  category   Category @relation(fields: [categoryId], references: [CategoryID])
-
-  @@id([supplierId, categoryId])
-}
-
-// 7. Tedarik Ettiği Ürün ve Hizmetler
-model SupplierProduct {
-  id                 String            @id @default(cuid())
-  supplierId         String
-  name               String
-  sku                String?
-  technicalSpecs     String?
-  unit               String
-  supplier           Supplier          @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  purchaseOrderItems PurchaseOrderItem[]
-
-  @@index([supplierId])
-}
-
-// 8. Önceki Alımlar (Satın Alma Siparişleri)
-model PurchaseOrder {
-  id                 String              @id @default(cuid())
-  supplierId         String
-  orderNumber        String              @unique
-  orderDate          DateTime
-  expectedDelivery   DateTime
-  actualDelivery     DateTime?
-  status             PurchaseOrderStatus @default(CREATED)
-  totalAmount        Decimal             @db.Money
-  currency           String
-  createdById        String
-  notes              String?
-  supplier           Supplier            @relation(fields: [supplierId], references: [id])
-  createdBy          User                @relation(fields: [createdById], references: [id])
-  items              PurchaseOrderItem[]
-
-  @@index([supplierId])
-  @@index([createdById])
-}
-
-// 8.2. Sipariş Kalemleri
-model PurchaseOrderItem {
-  id              String          @id @default(cuid())
-  purchaseOrderId String
-  productId       String
-  productName     String
-  quantity        Int
-  unit            String
-  unitPrice       Decimal         @db.Money
-  vatRate         Float
-  discountRate    Float           @default(0)
-  totalPrice      Decimal         @db.Money
-  status          OrderItemStatus @default(PENDING)
-  purchaseOrder   PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  product         SupplierProduct @relation(fields: [productId], references: [id])
-
-  @@index([purchaseOrderId])
-  @@index([productId])
 }
 
 enum SupplierType {

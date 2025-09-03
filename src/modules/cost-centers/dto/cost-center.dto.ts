@@ -48,6 +48,20 @@ export class UpdateCostCenterDto {
   @IsOptional()
   budget?: number;
 
+  @ApiPropertyOptional({ description: 'Harcanan bütçe', example: 50000 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  spentBudget?: number;
+
+  @ApiPropertyOptional({ description: 'Kalan bütçe', example: 50000 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  remainingBudget?: number;
+
   @ApiPropertyOptional({ description: 'Bütçe sahibi kullanıcı ID\'si' })
   @IsUUID()
   @IsOptional()
