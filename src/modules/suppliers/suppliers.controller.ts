@@ -1,83 +1,43 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Request, UseGuards } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
-import { CreateSupplierInput } from './dto/create-supplier.input';
-import { UpdateSupplierInput } from './dto/update-supplier.input';
+import { Prisma } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
-import { FastifyFileInterceptor } from '../../common/interceptors/fastify-file-interceptor';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 
-@UseGuards(JwtAuthGuard)
 @Controller('suppliers')
+@UseGuards(JwtAuthGuard)
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
 
   @Post()
-  create(@Body() createSupplierInput: CreateSupplierInput, @Req() req) {
-    const companyId = req.user.companyId;
-    return this.suppliersService.create(createSupplierInput, companyId);
+  create(@Body() createSupplierDto: Prisma.SupplierUncheckedCreateInput, @Request() req: any) {
+    return this.suppliersService.create(createSupplierDto, req.user.id);
   }
 
   @Get()
-  findAll(@Req() req) {
-    const companyId = req.user.companyId;
-    return this.suppliersService.findAll(companyId);
+  findAll() {
+    return this.suppliersService.findAll({});
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.suppliersService.findOne(id);
+    return this.suppliersService.findOne({ id });
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateSupplierInput: UpdateSupplierInput) {
-    return this.suppliersService.update(id, updateSupplierInput);
+  update(
+    @Param('id') id: string,
+    @Body() updateSupplierDto: Prisma.SupplierUpdateInput,
+    @Request() req: any
+  ) {
+    return this.suppliersService.update({
+      where: { id },
+      data: updateSupplierDto,
+      userId: req.user.id // Pass the current user's ID from request
+    });
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.suppliersService.remove(id);
-  }
-
-  @Post(':id/upload')
-  @UseInterceptors(FastifyFileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, cb) => {
-        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
-        cb(null, `${randomName}${extname(file.originalname)}`);
-      },
-    }),
-  }))
-  uploadFile(@Param('id') id: string, @UploadedFile(
-    new ParseFilePipe({
-      validators: [
-        new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 5 }), // 5MB
-        new FileTypeValidator({ fileType: '.(png|jpeg|jpg|pdf|doc|docx|xls|xlsx)' }),
-      ],
-    }),
-  ) file: Express.Multer.File) {
-    return this.suppliersService.addDocument(id, file.filename, file.path, file.mimetype);
-  }
-
-  @Post(':id/photo')
-  @UseInterceptors(FastifyFileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/photos',
-      filename: (req, file, cb) => {
-        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
-        cb(null, `${randomName}${extname(file.originalname)}`);
-      },
-    }),
-  }))
-  uploadPhoto(@Param('id') id: string, @UploadedFile(
-    new ParseFilePipe({
-      validators: [
-        new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 2 }), // 2MB
-        new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
-      ],
-    }),
-  ) file: Express.Multer.File) {
-    return this.suppliersService.updatePhoto(id, file.path);
+    return this.suppliersService.remove({ id });
   }
 }

@@ -507,9 +507,6 @@ export class CategoriesService {
         select: {
           price: true,
           createdAt: true,
-          supplierProducts: {
-            select: { supplier: { select: { name: true } } },
-          },
         },
       })
       .then((products) => products.map((p) => ({ ...p, type: 'Ürün' })))
@@ -519,9 +516,6 @@ export class CategoriesService {
           select: {
             price: true,
             createdAt: true,
-            supplierServices: {
-              select: { supplier: { select: { name: true } } },
-            },
           },
         });
         return [...products, ...services.map((s) => ({ ...s, type: 'Hizmet' }))];
@@ -542,15 +536,6 @@ export class CategoriesService {
 
     const supplierContributions = new Map<string, number>();
     items.forEach((item) => {
-      const suppliers =
-        (item as any).supplierProducts || (item as any).supplierServices;
-      suppliers?.forEach((sp: any) => {
-        const name = sp.supplier.name;
-        supplierContributions.set(
-          name,
-          (supplierContributions.get(name) || 0) + item.price.toNumber(),
-        );
-      });
     });
 
     const topSuppliersByValue = [...supplierContributions.entries()]

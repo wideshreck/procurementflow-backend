@@ -17,9 +17,6 @@ CREATE TYPE "public"."ProductStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'DRAFT');
 CREATE TYPE "public"."ServiceStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'DRAFT');
 
 -- CreateEnum
-CREATE TYPE "public"."SupplierStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'PENDING');
-
--- CreateEnum
 CREATE TYPE "public"."CategoryColor" AS ENUM ('RED', 'ORANGE', 'AMBER', 'YELLOW', 'LIME', 'GREEN', 'EMERALD', 'TEAL', 'CYAN', 'SKY', 'BLUE', 'INDIGO', 'VIOLET', 'PURPLE', 'FUCHSIA', 'PINK', 'ROSE', 'SLATE', 'GRAY', 'ZINC', 'NEUTRAL', 'STONE');
 
 -- CreateEnum
@@ -30,6 +27,24 @@ CREATE TYPE "public"."Urgency" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT');
 
 -- CreateEnum
 CREATE TYPE "public"."WorkflowStatus" AS ENUM ('IN_PROGRESS', 'COMPLETED', 'REJECTED', 'CANCELLED');
+
+-- CreateEnum
+CREATE TYPE "public"."SupplierType" AS ENUM ('MANUFACTURER', 'DISTRIBUTOR', 'SERVICE_PROVIDER');
+
+-- CreateEnum
+CREATE TYPE "public"."SupplierStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'PENDING_APPROVAL');
+
+-- CreateEnum
+CREATE TYPE "public"."ContactRole" AS ENUM ('PRIMARY_CONTACT', 'EXECUTIVE', 'FINANCE', 'TECHNICAL');
+
+-- CreateEnum
+CREATE TYPE "public"."DocumentType" AS ENUM ('CONTRACT', 'CERTIFICATE', 'EMAIL_ARCHIVE', 'TAX_DOCUMENT', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "public"."PurchaseOrderStatus" AS ENUM ('CREATED', 'APPROVED', 'IN_TRANSIT', 'PARTIALLY_DELIVERED', 'COMPLETED', 'CANCELLED');
+
+-- CreateEnum
+CREATE TYPE "public"."OrderItemStatus" AS ENUM ('PENDING', 'DELIVERED', 'OUT_OF_STOCK');
 
 -- CreateTable
 CREATE TABLE "public"."User" (
@@ -221,83 +236,6 @@ CREATE TABLE "public"."Service" (
 );
 
 -- CreateTable
-CREATE TABLE "public"."Supplier" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "address" TEXT,
-    "phone" TEXT,
-    "email" TEXT,
-    "website" TEXT,
-    "status" "public"."SupplierStatus" NOT NULL DEFAULT 'PENDING',
-    "rating" DECIMAL(65,30),
-    "companyId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "taxInfo" JSONB,
-    "imageUrl" TEXT,
-
-    CONSTRAINT "Supplier_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "public"."AuthorizedPerson" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "phone" TEXT NOT NULL,
-    "supplierId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "AuthorizedPerson_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "public"."SupplierDocument" (
-    "id" TEXT NOT NULL,
-    "fileName" TEXT NOT NULL,
-    "filePath" TEXT NOT NULL,
-    "fileType" TEXT NOT NULL,
-    "supplierId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "SupplierDocument_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "public"."SupplierProduct" (
-    "id" TEXT NOT NULL,
-    "supplierId" TEXT NOT NULL,
-    "productId" TEXT NOT NULL,
-    "supplierPrice" MONEY NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'TRY',
-    "leadTime" INTEGER NOT NULL,
-    "minOrderQty" INTEGER NOT NULL DEFAULT 1,
-    "isPreferred" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "SupplierProduct_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "public"."SupplierService" (
-    "id" TEXT NOT NULL,
-    "supplierId" TEXT NOT NULL,
-    "serviceId" TEXT NOT NULL,
-    "supplierPrice" MONEY NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'TRY',
-    "leadTime" INTEGER NOT NULL,
-    "isPreferred" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "SupplierService_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "public"."Company" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -422,11 +360,11 @@ CREATE TABLE "public"."Workflow" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "nodes" JSONB NOT NULL,
     "edges" JSONB NOT NULL,
     "companyId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "nodes" JSONB NOT NULL,
 
     CONSTRAINT "Workflow_pkey" PRIMARY KEY ("id")
 );
@@ -446,45 +384,131 @@ CREATE TABLE "public"."WorkflowInstance" (
 );
 
 -- CreateTable
-CREATE TABLE "public"."MeetingNote" (
+CREATE TABLE "public"."Supplier" (
     "id" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "content" TEXT NOT NULL,
-    "date" TIMESTAMP(3) NOT NULL,
-    "supplierId" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "logoUrl" TEXT,
+    "companyName" TEXT NOT NULL,
+    "brandName" TEXT,
+    "description" TEXT,
+    "country" TEXT NOT NULL,
+    "city" TEXT NOT NULL,
+    "district" TEXT NOT NULL,
+    "postalCode" TEXT,
+    "address" TEXT NOT NULL,
+    "website" TEXT,
+    "taxOffice" TEXT NOT NULL,
+    "taxNumber" TEXT NOT NULL,
+    "supplierType" "public"."SupplierType" NOT NULL,
+    "status" "public"."SupplierStatus" NOT NULL DEFAULT 'PENDING_APPROVAL',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "MeetingNote_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Supplier_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."Contract" (
+CREATE TABLE "public"."SupplierContact" (
     "id" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "filePath" TEXT NOT NULL,
-    "startDate" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3) NOT NULL,
     "supplierId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "phone" TEXT,
+    "title" TEXT NOT NULL,
+    "role" "public"."ContactRole" NOT NULL,
 
-    CONSTRAINT "Contract_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "SupplierContact_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."Email" (
+CREATE TABLE "public"."SupplierDocument" (
     "id" TEXT NOT NULL,
-    "subject" TEXT NOT NULL,
-    "body" TEXT NOT NULL,
-    "from" TEXT NOT NULL,
-    "to" TEXT NOT NULL,
-    "date" TIMESTAMP(3) NOT NULL,
     "supplierId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "title" TEXT NOT NULL,
+    "documentType" "public"."DocumentType" NOT NULL,
+    "fileUrl" TEXT NOT NULL,
+    "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "uploadedById" TEXT NOT NULL,
+    "validUntil" TIMESTAMP(3),
 
-    CONSTRAINT "Email_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "SupplierDocument_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."SupplierMeetingNote" (
+    "id" TEXT NOT NULL,
+    "supplierId" TEXT NOT NULL,
+    "meetingDate" TIMESTAMP(3) NOT NULL,
+    "title" TEXT NOT NULL,
+    "participants" TEXT NOT NULL,
+    "notes" TEXT NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "SupplierMeetingNote_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."SupplierCustomField" (
+    "id" TEXT NOT NULL,
+    "supplierId" TEXT NOT NULL,
+    "fieldName" TEXT NOT NULL,
+    "fieldValue" TEXT NOT NULL,
+
+    CONSTRAINT "SupplierCustomField_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."SupplierCategory" (
+    "supplierId" TEXT NOT NULL,
+    "categoryId" TEXT NOT NULL,
+
+    CONSTRAINT "SupplierCategory_pkey" PRIMARY KEY ("supplierId","categoryId")
+);
+
+-- CreateTable
+CREATE TABLE "public"."SupplierProduct" (
+    "id" TEXT NOT NULL,
+    "supplierId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "sku" TEXT,
+    "technicalSpecs" TEXT,
+    "unit" TEXT NOT NULL,
+
+    CONSTRAINT "SupplierProduct_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."PurchaseOrder" (
+    "id" TEXT NOT NULL,
+    "supplierId" TEXT NOT NULL,
+    "orderNumber" TEXT NOT NULL,
+    "orderDate" TIMESTAMP(3) NOT NULL,
+    "expectedDelivery" TIMESTAMP(3) NOT NULL,
+    "actualDelivery" TIMESTAMP(3),
+    "status" "public"."PurchaseOrderStatus" NOT NULL DEFAULT 'CREATED',
+    "totalAmount" MONEY NOT NULL,
+    "currency" TEXT NOT NULL,
+    "createdById" TEXT NOT NULL,
+    "notes" TEXT,
+
+    CONSTRAINT "PurchaseOrder_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."PurchaseOrderItem" (
+    "id" TEXT NOT NULL,
+    "purchaseOrderId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "productName" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "unit" TEXT NOT NULL,
+    "unitPrice" MONEY NOT NULL,
+    "vatRate" DOUBLE PRECISION NOT NULL,
+    "discountRate" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "totalPrice" MONEY NOT NULL,
+    "status" "public"."OrderItemStatus" NOT NULL DEFAULT 'PENDING',
+
+    CONSTRAINT "PurchaseOrderItem_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -590,33 +614,6 @@ CREATE INDEX "Service_CategoryID_idx" ON "public"."Service"("CategoryID");
 CREATE INDEX "Service_code_idx" ON "public"."Service"("code");
 
 -- CreateIndex
-CREATE INDEX "Supplier_companyId_status_idx" ON "public"."Supplier"("companyId", "status");
-
--- CreateIndex
-CREATE INDEX "AuthorizedPerson_supplierId_idx" ON "public"."AuthorizedPerson"("supplierId");
-
--- CreateIndex
-CREATE INDEX "SupplierDocument_supplierId_idx" ON "public"."SupplierDocument"("supplierId");
-
--- CreateIndex
-CREATE INDEX "SupplierProduct_productId_idx" ON "public"."SupplierProduct"("productId");
-
--- CreateIndex
-CREATE INDEX "SupplierProduct_supplierId_idx" ON "public"."SupplierProduct"("supplierId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "SupplierProduct_supplierId_productId_key" ON "public"."SupplierProduct"("supplierId", "productId");
-
--- CreateIndex
-CREATE INDEX "SupplierService_serviceId_idx" ON "public"."SupplierService"("serviceId");
-
--- CreateIndex
-CREATE INDEX "SupplierService_supplierId_idx" ON "public"."SupplierService"("supplierId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "SupplierService_supplierId_serviceId_key" ON "public"."SupplierService"("supplierId", "serviceId");
-
--- CreateIndex
 CREATE INDEX "Company_name_idx" ON "public"."Company"("name");
 
 -- CreateIndex
@@ -677,13 +674,49 @@ CREATE INDEX "WorkflowInstance_workflowId_idx" ON "public"."WorkflowInstance"("w
 CREATE INDEX "WorkflowInstance_procurementRequestId_idx" ON "public"."WorkflowInstance"("procurementRequestId");
 
 -- CreateIndex
-CREATE INDEX "MeetingNote_supplierId_idx" ON "public"."MeetingNote"("supplierId");
+CREATE UNIQUE INDEX "Supplier_taxNumber_key" ON "public"."Supplier"("taxNumber");
 
 -- CreateIndex
-CREATE INDEX "Contract_supplierId_idx" ON "public"."Contract"("supplierId");
+CREATE INDEX "Supplier_companyId_idx" ON "public"."Supplier"("companyId");
 
 -- CreateIndex
-CREATE INDEX "Email_supplierId_idx" ON "public"."Email"("supplierId");
+CREATE INDEX "Supplier_companyId_status_idx" ON "public"."Supplier"("companyId", "status");
+
+-- CreateIndex
+CREATE INDEX "SupplierContact_supplierId_idx" ON "public"."SupplierContact"("supplierId");
+
+-- CreateIndex
+CREATE INDEX "SupplierDocument_supplierId_idx" ON "public"."SupplierDocument"("supplierId");
+
+-- CreateIndex
+CREATE INDEX "SupplierDocument_uploadedById_idx" ON "public"."SupplierDocument"("uploadedById");
+
+-- CreateIndex
+CREATE INDEX "SupplierMeetingNote_supplierId_idx" ON "public"."SupplierMeetingNote"("supplierId");
+
+-- CreateIndex
+CREATE INDEX "SupplierMeetingNote_createdById_idx" ON "public"."SupplierMeetingNote"("createdById");
+
+-- CreateIndex
+CREATE INDEX "SupplierCustomField_supplierId_idx" ON "public"."SupplierCustomField"("supplierId");
+
+-- CreateIndex
+CREATE INDEX "SupplierProduct_supplierId_idx" ON "public"."SupplierProduct"("supplierId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PurchaseOrder_orderNumber_key" ON "public"."PurchaseOrder"("orderNumber");
+
+-- CreateIndex
+CREATE INDEX "PurchaseOrder_supplierId_idx" ON "public"."PurchaseOrder"("supplierId");
+
+-- CreateIndex
+CREATE INDEX "PurchaseOrder_createdById_idx" ON "public"."PurchaseOrder"("createdById");
+
+-- CreateIndex
+CREATE INDEX "PurchaseOrderItem_purchaseOrderId_idx" ON "public"."PurchaseOrderItem"("purchaseOrderId");
+
+-- CreateIndex
+CREATE INDEX "PurchaseOrderItem_productId_idx" ON "public"."PurchaseOrderItem"("productId");
 
 -- AddForeignKey
 ALTER TABLE "public"."User" ADD CONSTRAINT "User_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "public"."Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -726,27 +759,6 @@ ALTER TABLE "public"."Service" ADD CONSTRAINT "Service_CategoryID_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "public"."Service" ADD CONSTRAINT "Service_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "public"."Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "public"."Supplier" ADD CONSTRAINT "Supplier_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "public"."Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "public"."AuthorizedPerson" ADD CONSTRAINT "AuthorizedPerson_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "public"."SupplierDocument" ADD CONSTRAINT "SupplierDocument_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "public"."SupplierProduct" ADD CONSTRAINT "SupplierProduct_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "public"."SupplierProduct" ADD CONSTRAINT "SupplierProduct_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "public"."SupplierService" ADD CONSTRAINT "SupplierService_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "public"."Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "public"."SupplierService" ADD CONSTRAINT "SupplierService_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."Category" ADD CONSTRAINT "Category_ParentCategoryID_fkey" FOREIGN KEY ("ParentCategoryID") REFERENCES "public"."Category"("CategoryID") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -800,10 +812,43 @@ ALTER TABLE "public"."WorkflowInstance" ADD CONSTRAINT "WorkflowInstance_procure
 ALTER TABLE "public"."WorkflowInstance" ADD CONSTRAINT "WorkflowInstance_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "public"."Workflow"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."MeetingNote" ADD CONSTRAINT "MeetingNote_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."Supplier" ADD CONSTRAINT "Supplier_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "public"."Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Contract" ADD CONSTRAINT "Contract_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."SupplierContact" ADD CONSTRAINT "SupplierContact_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Email" ADD CONSTRAINT "Email_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."SupplierDocument" ADD CONSTRAINT "SupplierDocument_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SupplierDocument" ADD CONSTRAINT "SupplierDocument_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SupplierMeetingNote" ADD CONSTRAINT "SupplierMeetingNote_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SupplierMeetingNote" ADD CONSTRAINT "SupplierMeetingNote_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SupplierCustomField" ADD CONSTRAINT "SupplierCustomField_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SupplierCategory" ADD CONSTRAINT "SupplierCategory_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SupplierCategory" ADD CONSTRAINT "SupplierCategory_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "public"."Category"("CategoryID") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SupplierProduct" ADD CONSTRAINT "SupplierProduct_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "public"."Supplier"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."PurchaseOrderItem" ADD CONSTRAINT "PurchaseOrderItem_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "public"."PurchaseOrder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."PurchaseOrderItem" ADD CONSTRAINT "PurchaseOrderItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "public"."SupplierProduct"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

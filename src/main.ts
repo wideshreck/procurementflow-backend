@@ -15,6 +15,8 @@ import { fastify } from 'fastify';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyCookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
+import { join } from 'path';
 
 async function bootstrap() {
   patchNestJsSwagger();
@@ -27,6 +29,10 @@ async function bootstrap() {
     }),
     { bufferLogs: true },
   );
+
+  // Add multipart support
+  const fastifyInstance = app.getHttpAdapter().getInstance();
+  await fastifyInstance.register(multipart);
 
   app.useLogger(app.get(Logger));
   app.setGlobalPrefix('api');
@@ -49,8 +55,6 @@ async function bootstrap() {
   await app.register(fastifyCookie, {
     secret: process.env.COOKIE_SECRET || 'a-secure-secret-for-cookie-signing',
   });
-
-  await app.register(multipart);
 
   // Empty body handler for specific endpoints
   await app.register(async function (fastify) {
@@ -90,6 +94,12 @@ async function bootstrap() {
     timeWindow: process.env.RATE_LIMIT_WINDOW ?? '15 minutes',
     keyGenerator: (req) =>
       (req.headers['x-forwarded-for'] as string) || req.ip,
+  });
+
+  // Static file serving
+  await fastifyInstance.register(fastifyStatic, {
+    root: join(process.cwd(), 'uploads'),
+    prefix: '/uploads/',
   });
 
   // --- Swagger ---

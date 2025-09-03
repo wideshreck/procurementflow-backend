@@ -21,9 +21,7 @@ import { CostCentersModule } from './modules/cost-centers/cost-centers.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
-import { MeetingNotesModule } from './modules/meeting-notes/meeting-notes.module';
-import { ContractsModule } from './modules/contracts/contracts.module';
-import { EmailsModule } from './modules/emails/emails.module';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
@@ -65,9 +63,7 @@ import { EmailsModule } from './modules/emails/emails.module';
     CategoriesModule,
     WorkflowModule,
     SuppliersModule,
-    MeetingNotesModule,
-    ContractsModule,
-    EmailsModule,
+    FilesModule,
   ],
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },
