@@ -52,58 +52,6 @@ export class ProcurementController {
     );
   }
 
-  @Post('chat/test')
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Public test endpoint for procurement chat (development only)' })
-  @ApiResponse({ status: 200, description: 'Message processed successfully' })
-  async testChat(
-    @Body() chatDto: ChatDto,
-  ): Promise<ChatbotResponse> {
-    const testUserId = 'test-user-demo';
-
-    if (chatDto.cancel) {
-      await this.orchestratorService.cancelConversation(testUserId);
-      return {
-        conversationId: undefined, // Signal frontend to clear conversation ID
-        response: 'Conversation cancelled successfully.',
-        MODE: ChatbotMode.CONVERSATION_CANCELLED,
-      };
-    }
-
-    // Use a test user ID for demonstration
-    return this.orchestratorService.processMessage(
-      testUserId,
-      chatDto.message || '',
-      chatDto.conversationId,
-    );
-  }
-
-  @Get('test-flow')
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Test procurement flow integration' })
-  async testFlow(): Promise<any> {
-    // Test with a mock user ID
-    const testUserId = 'test-user-' + Date.now();
-    
-    // Simulate Phase 1
-    const phase1Response = await this.orchestratorService.processMessage(
-      testUserId,
-      'I need 10 laptops for accounting department'
-    );
-    
-    return {
-      message: 'Procurement flow test completed',
-      testUserId,
-      response: phase1Response,
-      phases: {
-        phase1: 'Product Identification',
-        phase2: 'Catalog Matching (auto-starts after Phase 1)',
-        phase3: 'Specification Generation (auto-starts after Phase 2)'
-      }
-    };
-  }
 
   @Get('requests')
   findAll() {
