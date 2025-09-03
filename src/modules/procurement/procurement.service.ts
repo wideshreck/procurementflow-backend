@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProcurementRequestDto } from './dto/create-procurement-request.dto';
 import type { User } from '@prisma/client';
@@ -6,6 +6,8 @@ import { GeminiService } from './common/gemini/gemini.service';
 
 @Injectable()
 export class ProcurementService {
+  private readonly logger = new Logger(ProcurementService.name);
+
   constructor(
     private prisma: PrismaService,
     private geminiService: GeminiService,
@@ -115,7 +117,7 @@ export class ProcurementService {
     // If still no category found, create or use a default one
     if (!categoryRecord) {
       const categoryIdToUse = category_id || 'DEFAULT-CAT';
-      console.warn(`Category "${categoryIdToUse}" not found, creating/using default category`);
+      this.logger.warn(`Category "${categoryIdToUse}" not found, creating/using default category`);
       
       // Find or create a default company first
       let defaultCompany = await this.prisma.company.findFirst();
@@ -276,7 +278,7 @@ Response:`;
         currency: estimatedCurrency
       };
     } catch (error) {
-      console.error('Error estimating price:', error);
+      this.logger.error('Error estimating price:', error);
       // Return a default price based on currency
       const defaultPrices = {
         TRY: 25000,
