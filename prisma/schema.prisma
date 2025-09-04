@@ -12,14 +12,13 @@ model User {
   email                   String                   @unique
   password                String
   fullName                String
-  role                    Role                     @default(USER)
+  customRoleId            String?
+  customRole              CustomRole?              @relation(fields: [customRoleId], references: [id])
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   department              String?
   phone                   String?
   role_title              String?
-  emailVerified           Boolean                  @default(false)
-  emailVerifiedAt         DateTime?
   isActive                Boolean                  @default(true)
   lastLoginAt             DateTime?
   lastLoginIp             String?
@@ -28,20 +27,17 @@ model User {
   conversations           Conversation[]
   ownedBudgets            CostCenter[]             @relation("BudgetOwner")
   managedDepartments      Department[]             @relation("DepartmentManager")
-  emailVerificationTokens EmailVerificationToken[]
   locationContacts        Location[]               @relation("LocationContact")
   loginAttempts           LoginAttempt[]
   passwordResets          PasswordReset[]
   refreshTokens           RefreshToken[]
   sessions                Session[]
-  twoFactorAuth           TwoFactorAuth?
   company                 Company                  @relation("UserCompany", fields: [companyId], references: [id])
   supplierDocuments       SupplierDocument[]
   supplierMeetingNotes    SupplierMeetingNote[]
   purchaseOrders          PurchaseOrder[]
 
   @@index([email])
-  @@index([isActive, emailVerified])
   @@index([companyId])
 }
 
@@ -137,32 +133,6 @@ model PasswordReset {
   @@index([userId])
 }
 
-model EmailVerificationToken {
-  id        String    @id @default(cuid())
-  userId    String
-  token     String    @unique
-  email     String
-  used      Boolean   @default(false)
-  usedAt    DateTime?
-  expiresAt DateTime
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([userId])
-}
-
-model TwoFactorAuth {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  secret      String
-  backupCodes String[]
-  enabled     Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String?
@@ -240,6 +210,7 @@ model Company {
   users       User[]       @relation("UserCompany")
   workflows   Workflow[]
   suppliers   Supplier[]
+  customRoles CustomRole[]
 
   @@index([name])
 }
@@ -408,11 +379,6 @@ model WorkflowInstance {
   @@index([procurementRequestId])
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 enum ProcurementPhase {
   IDENTIFICATION
   SUGGESTIONS
@@ -501,7 +467,7 @@ enum WorkflowStatus {
 
 // 1. Ana Tedarikçi Bilgileri
 model Supplier {
-  id                  String                  @id @default(cuid())
+  id                  String                @id @default(cuid())
   companyId           String
   logoUrl             String?
   companyName         String
@@ -514,12 +480,12 @@ model Supplier {
   address             String
   website             String?
   taxOffice           String
-  taxNumber           String                  @unique
+  taxNumber           String                @unique
   supplierType        SupplierType
-  status              SupplierStatus          @default(PENDING_APPROVAL)
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
-  company             Company                 @relation(fields: [companyId], references: [id])
+  status              SupplierStatus        @default(PENDING_APPROVAL)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  company             Company               @relation(fields: [companyId], references: [id])
   contacts            SupplierContact[]
   documents           SupplierDocument[]
   notes               SupplierMeetingNote[]
@@ -534,14 +500,14 @@ model Supplier {
 
 // 2. İlgili Kişiler
 model SupplierContact {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   supplierId String
   fullName   String
   email      String
   phone      String?
   title      String
   role       ContactRole
-  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplier   Supplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   @@index([supplierId])
 }
@@ -602,13 +568,13 @@ model SupplierCategory {
 
 // 7. Tedarik Ettiği Ürün ve Hizmetler
 model SupplierProduct {
-  id                 String            @id @default(cuid())
+  id                 String              @id @default(cuid())
   supplierId         String
   name               String
   sku                String?
   technicalSpecs     String?
   unit               String
-  supplier           Supplier          @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   purchaseOrderItems PurchaseOrderItem[]
 
   @@index([supplierId])
@@ -616,20 +582,20 @@ model SupplierProduct {
 
 // 8. Önceki Alımlar (Satın Alma Siparişleri)
 model PurchaseOrder {
-  id                 String              @id @default(cuid())
-  supplierId         String
-  orderNumber        String              @unique
-  orderDate          DateTime
-  expectedDelivery   DateTime
-  actualDelivery     DateTime?
-  status             PurchaseOrderStatus @default(CREATED)
-  totalAmount        Decimal             @db.Money
-  currency           String
-  createdById        String
-  notes              String?
-  supplier           Supplier            @relation(fields: [supplierId], references: [id])
-  createdBy          User                @relation(fields: [createdById], references: [id])
-  items              PurchaseOrderItem[]
+  id               String              @id @default(cuid())
+  supplierId       String
+  orderNumber      String              @unique
+  orderDate        DateTime
+  expectedDelivery DateTime
+  actualDelivery   DateTime?
+  status           PurchaseOrderStatus @default(CREATED)
+  totalAmount      Decimal             @db.Money
+  currency         String
+  createdById      String
+  notes            String?
+  supplier         Supplier            @relation(fields: [supplierId], references: [id])
+  createdBy        User                @relation(fields: [createdById], references: [id])
+  items            PurchaseOrderItem[]
 
   @@index([supplierId])
   @@index([createdById])
@@ -695,4 +661,20 @@ enum OrderItemStatus {
   PENDING
   DELIVERED
   OUT_OF_STOCK
+}
+
+model CustomRole {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  permissions Json
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
 }

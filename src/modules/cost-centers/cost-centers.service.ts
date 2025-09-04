@@ -175,7 +175,7 @@ export class CostCentersService {
   async update(id: string, updateCostCenterDto: UpdateCostCenterDto, userId: string): Promise<CostCenterResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { companyId: true, role: true },
+      select: { companyId: true, customRole: true },
     });
 
     if (!user) {
@@ -267,15 +267,15 @@ export class CostCentersService {
   async remove(id: string, userId: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { companyId: true, role: true },
+      include: { customRole: true },
     });
 
     if (!user) {
       throw new NotFoundException('Kullanıcı bulunamadı');
     }
 
-    // Sadece ADMIN rolü silebilir
-    if (user.role !== 'ADMIN') {
+    const permissions = user.customRole?.permissions as string[];
+    if (!permissions?.includes('cost-centers:delete')) {
       throw new ForbiddenException('Bu işlem için yetkiniz yok');
     }
 

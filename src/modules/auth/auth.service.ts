@@ -16,7 +16,6 @@ import {
   TokenService,
   AuditLogService,
   LoginAttemptService,
-  MfaService,
   EmailService
 } from './services';
 import { AUTH_CONSTANTS } from './constants/auth.constants';
@@ -35,7 +34,6 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly auditLog: AuditLogService,
     private readonly loginAttempts: LoginAttemptService,
-    private readonly mfa: MfaService,
     private readonly email: EmailService,
   ) {}
 
@@ -98,19 +96,23 @@ export class AuthService {
     );
 
     // Generate tokens
+    const userWithRole = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { customRole: true },
+    });
+    if (!userWithRole) {
+      throw new UnauthorizedException('User not found');
+    }
+    const permissions = userWithRole.customRole?.permissions as string[] || [];
     const tokens = await this.tokens.generateTokens(
       user.id,
       user.email,
-      user.role as 'USER' | 'ADMIN',
+      permissions,
       session.id,
       ipAddress,
       userAgent,
       deviceInfo,
     );
-
-    // Send verification email
-    const verificationToken = await this.tokens.generateEmailVerificationToken(user.id, user.email);
-    await this.email.sendVerificationEmail(user.email, user.fullName, verificationToken);
 
     // Audit log
     await this.auditLog.logLogin(user.id, ipAddress, userAgent, {
@@ -128,7 +130,6 @@ export class AuthService {
   async signIn(
     email: string,
     password: string,
-    mfaCode?: string,
     ipAddress?: string,
     userAgent?: string
   ): Promise<AuthResponse> {
@@ -175,24 +176,6 @@ export class AuthService {
       throw new UnauthorizedException('Hesap devre dışı bırakılmış');
     }
 
-    // Check MFA if enabled
-    const isMfaEnabled = await this.mfa.isMfaEnabled(user.id);
-    if (isMfaEnabled) {
-      if (!mfaCode) {
-        // Return a special response indicating MFA is required
-        return {
-          user: { id: user.id, mfaRequired: true },
-          tokens: { accessToken: '', refreshToken: '', csrfToken: '' },
-        } as any;
-      }
-
-      const isMfaValid = await this.mfa.verifyMfa(user.id, mfaCode);
-      if (!isMfaValid) {
-        await this.recordFailedLogin(normalizedEmail, ipAddress, userAgent, 'Invalid MFA code', user.id);
-        throw new UnauthorizedException('Geçersiz doğrulama kodu');
-      }
-    }
-
     // Create session
     const deviceInfo = this.extractDeviceInfo(userAgent);
     const session = await this.sessions.createSession(
@@ -203,10 +186,18 @@ export class AuthService {
     );
 
     // Generate tokens
+    const userWithRole = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { customRole: true },
+    });
+    if (!userWithRole) {
+      throw new UnauthorizedException('User not found');
+    }
+    const permissions = userWithRole.customRole?.permissions as string[] || [];
     const tokens = await this.tokens.generateTokens(
       user.id,
       user.email,
-      user.role as 'USER' | 'ADMIN',
+      permissions,
       session.id,
       ipAddress,
       userAgent,
@@ -237,17 +228,17 @@ export class AuthService {
     });
 
     // Check for suspicious login patterns and send alert if needed
-    if (ipAddress) {
-      const suspicious = await this.loginAttempts.getSuspiciousLoginPatterns(user.id);
-      if (suspicious.patterns.multipleIps || suspicious.patterns.unusualTimes) {
-        await this.email.sendLoginAlertEmail(
-          user.email,
-          user.fullName,
-          ipAddress,
-          userAgent,
-        );
-      }
-    }
+    // if (ipAddress) {
+    //   const suspicious = await this.loginAttempts.getSuspiciousLoginPatterns(user.id);
+    //   if (suspicious.patterns.multipleIps || suspicious.patterns.unusualTimes) {
+    //     await this.email.sendLoginAlertEmail(
+    //       user.email,
+    //       user.fullName,
+    //       ipAddress,
+    //       userAgent,
+    //     );
+    //   }
+    // }
     
     const publicUser = await this.users.getPublicUserById(user.id);
     return {
@@ -288,51 +279,6 @@ export class AuthService {
       user: this.sanitizeUser(user),
       tokens,
     };
-  }
-
-  // ===== EMAIL VERIFICATION =====
-  async verifyEmail(token: string): Promise<void> {
-    const verificationToken = await (this.prisma as any).emailVerificationToken.findUnique({
-      where: { token },
-      include: { user: true },
-    });
-
-    if (!verificationToken) {
-      throw new BadRequestException('Geçersiz doğrulama linki');
-    }
-
-    if (verificationToken.used) {
-      throw new BadRequestException('Bu link daha önce kullanılmış');
-    }
-
-    if (verificationToken.expiresAt < new Date()) {
-      throw new BadRequestException('Doğrulama linki süresi dolmuş');
-    }
-
-    // Update user and mark token as used
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: verificationToken.userId },
-        data: {
-          emailVerified: true,
-          emailVerifiedAt: new Date(),
-        },
-      }),
-      (this.prisma as any).emailVerificationToken.update({
-        where: { id: verificationToken.id },
-        data: {
-          used: true,
-          usedAt: new Date(),
-        },
-      }),
-    ]);
-
-    // Audit log
-    await this.auditLog.log({
-      userId: verificationToken.userId,
-      action: AUTH_CONSTANTS.AUDIT_ACTIONS.EMAIL_VERIFICATION,
-      metadata: { email: verificationToken.email },
-    });
   }
 
   // ===== PASSWORD RESET REQUEST =====
@@ -480,55 +426,6 @@ export class AuthService {
 
     // Audit log
     await this.auditLog.logPasswordChange(userId, ipAddress, userAgent);
-  }
-
-  // ===== MFA MANAGEMENT =====
-  async setupMfa(userId: string) {
-    const user = await this.users.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return this.mfa.generateMfaSecret(userId, user.email);
-  }
-
-  async enableMfa(
-    userId: string,
-    secret: string,
-    verificationCode: string,
-    backupCodes: string[],
-    ipAddress?: string,
-    userAgent?: string
-  ): Promise<void> {
-    await this.mfa.enableMfa(userId, secret, verificationCode, backupCodes);
-
-    const user = await this.users.findById(userId);
-    if (user) {
-      await this.email.sendMfaEnabledEmail(user.email, user.fullName);
-    }
-
-    await this.auditLog.logMfaEnable(userId, ipAddress, userAgent);
-  }
-
-  async disableMfa(
-    userId: string,
-    password: string,
-    ipAddress?: string,
-    userAgent?: string
-  ): Promise<void> {
-    const user = await this.users.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    // Verify password
-    const isValid = await this.crypto.verifyPassword(user.password, password);
-    if (!isValid) {
-      throw new UnauthorizedException('Şifre yanlış');
-    }
-
-    await this.mfa.disableMfa(userId, password);
-    await this.auditLog.logMfaDisable(userId, ipAddress, userAgent);
   }
 
   // ===== HELPER METHODS =====

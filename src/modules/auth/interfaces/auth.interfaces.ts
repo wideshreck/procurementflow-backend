@@ -4,7 +4,7 @@ import { User } from '@prisma/client';
 export interface JwtPayload {
   sub: string;
   email: string;
-  role: 'USER' | 'ADMIN';
+  permissions: string[];
   sessionId: string;
   iat?: number;
   exp?: number;

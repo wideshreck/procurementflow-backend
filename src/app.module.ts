@@ -10,7 +10,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ZodSerializerInterceptor, ZodValidationPipe } from 'nestjs-zod';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
-import { RolesGuard } from './common/guards/roles.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 import { JwtAuthGuard } from './modules/auth/guards/jwt.guard';
 import { CsrfGuard } from './modules/auth/guards/csrf.guard';
 import { SecurityHeadersInterceptor } from './modules/auth/interceptors/security-headers.interceptor';
@@ -22,6 +22,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { FilesModule } from './modules/files/files.module';
+import { CustomRolesModule } from './modules/custom-roles/custom-roles.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { FilesModule } from './modules/files/files.module';
     WorkflowModule,
     SuppliersModule,
     FilesModule,
+    CustomRolesModule,
   ],
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },
@@ -73,7 +75,7 @@ import { FilesModule } from './modules/files/files.module';
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     // { provide: APP_GUARD, useClass: CsrfGuard },
-    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
 })
 export class AppModule {}
