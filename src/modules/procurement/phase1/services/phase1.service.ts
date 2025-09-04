@@ -197,7 +197,7 @@ ${costCentersString}
       }
       return null;
     } catch (error) {
-      this.logger.error('AI response parsing error:', error);
+      console.error('AI response parsing error:', error);
       return null;
     }
   }
