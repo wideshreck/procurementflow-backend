@@ -1,17 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
-// Uygulamadaki rol tipi
-export type Role = 'USER' | 'ADMIN';
-
 // Dışarıya dönerken hassas alanları asla göstermeyelim.
-// DÜZELTME: `companyId` alanı `select` sorgusuna eklendi.
 const publicUserSelect = {
   id: true,
   email: true,
   fullName: true,
-  role: true,
-  companyId: true, // Hatanın çözümü için eklendi.
+  customRole: {
+    select: {
+      id: true,
+      name: true,
+      permissions: true,
+    },
+  },
+  companyId: true,
   company: {
     select: {
       name: true,
@@ -20,8 +22,6 @@ const publicUserSelect = {
   department: true,
   phone: true,
   role_title: true,
-  emailVerified: true,
-  emailVerifiedAt: true,
   isActive: true,
   lastLoginAt: true,
   lastLoginIp: true,
@@ -69,9 +69,9 @@ export class UsersService {
     company: string; // Bu artık şirket ADI
     phone?: string;
     department?: string;
-    role?: Role;
+    customRoleId?: string;
   }) {
-    const { email, passwordHash, fullName, company: companyName, phone, department, role = 'USER' } = params;
+    const { email, passwordHash, fullName, company: companyName, phone, department, customRoleId } = params;
 
     // Şirketi isme göre bul veya oluştur.
     let company = await this.prisma.company.findFirst({
@@ -92,22 +92,28 @@ export class UsersService {
         companyId: company.id, // Kullanıcıyı şirket ID'si ile bağla
         phone,
         department,
-        role,
+        customRoleId,
       },
       select: publicUserSelect,
     });
   }
 
-  async updateUserRole(id: string, role: Role) {
-    const exists = await this.prisma.user.findUnique({
+  async updateUserCustomRole(id: string, customRoleId: string) {
+    const userExists = await this.prisma.user.findUnique({
       where: { id },
       select: { id: true },
     });
-    if (!exists) throw new NotFoundException('User not found');
+    if (!userExists) throw new NotFoundException('User not found');
+
+    const roleExists = await this.prisma.customRole.findUnique({
+      where: { id: customRoleId },
+      select: { id: true },
+    });
+    if (!roleExists) throw new NotFoundException('Custom role not found');
 
     return this.prisma.user.update({
       where: { id },
-      data: { role },
+      data: { customRoleId },
       select: publicUserSelect,
     });
   }

@@ -18,7 +18,7 @@ export class TokenService {
   async generateTokens(
     userId: string,
     email: string,
-    role: 'USER' | 'ADMIN',
+    permissions: string[],
     sessionId: string,
     ipAddress?: string,
     userAgent?: string,
@@ -29,7 +29,7 @@ export class TokenService {
     const csrfToken = this.crypto.generateSecureToken(16); // 16 bytes for CSRF token
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken({ sub: userId, email, role, sessionId }),
+      this.generateAccessToken({ sub: userId, email, permissions, sessionId }),
       this.generateRefreshToken({
         sub: userId,
         email,
@@ -52,7 +52,7 @@ export class TokenService {
     return { accessToken, refreshToken, csrfToken };
   }
 
-  private async generateAccessToken(payload: JwtPayload): Promise<string> {
+  private async generateAccessToken(payload: Omit<JwtPayload, 'role'> & { permissions: string[] }): Promise<string> {
     return this.jwt.signAsync(payload, {
       expiresIn: AUTH_CONSTANTS.ACCESS_TOKEN_EXPIRES_IN,
       issuer: this.config.get<string>('JWT_ISSUER', 'procurementflow'),
@@ -112,7 +112,7 @@ export class TokenService {
     // Find the stored token
     const storedToken = await (this.prisma as any).refreshToken.findUnique({
       where: { token: oldToken },
-      include: { user: true },
+      include: { user: { include: { customRole: true } } },
     });
 
     if (!storedToken || storedToken.isRevoked) {
@@ -140,11 +140,12 @@ export class TokenService {
 
     // Generate new tokens with same family
     const csrfToken = this.crypto.generateSecureToken(16);
+    const permissions = storedToken.user.customRole?.permissions as string[] || [];
     const [accessToken, refreshToken] = await Promise.all([
       this.generateAccessToken({
         sub: storedToken.userId,
         email: storedToken.user.email,
-        role: storedToken.user.role as 'USER' | 'ADMIN',
+        permissions,
         sessionId: payload.sessionId,
       }),
       this.generateRefreshToken({
@@ -221,22 +222,6 @@ export class TokenService {
     } catch {
       throw new UnauthorizedException('Invalid access token');
     }
-  }
-
-  async generateEmailVerificationToken(userId: string, email: string): Promise<string> {
-    const token = this.crypto.generateSecureToken(32);
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    await (this.prisma as any).emailVerificationToken.create({
-      data: {
-        userId,
-        email,
-        token,
-        expiresAt,
-      },
-    });
-
-    return token;
   }
 
   async generatePasswordResetToken(userId: string, ipAddress?: string): Promise<string> {

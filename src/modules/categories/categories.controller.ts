@@ -13,9 +13,7 @@ import {
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto, UpdateCategoryDto, CategoryResponseDto } from './dto/category.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -28,12 +26,12 @@ import {
 @ApiTags('categories')
 @ApiBearerAuth()
 @Controller('categories')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Permissions('categories:create')
   @ApiOperation({ summary: 'Yeni kategori oluştur' })
   @ApiResponse({ status: 201, description: 'Kategori başarıyla oluşturuldu', type: CategoryResponseDto })
   @ApiResponse({ status: 400, description: 'Geçersiz veri' })
@@ -43,7 +41,7 @@ export class CategoriesController {
   }
 
   @Post('bulk')
-  @Roles(Role.ADMIN)
+  @Permissions('categories:create')
   @ApiOperation({ summary: 'Toplu kategori oluştur' })
   @ApiResponse({ status: 201, description: 'Kategoriler başarıyla oluşturuldu' })
   bulkCreate(@Body() createCategoryDtos: CreateCategoryDto[], @Request() req): Promise<{ count: number }> {
@@ -82,7 +80,7 @@ export class CategoriesController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('categories:update')
   @ApiOperation({ summary: 'Kategori bilgilerini güncelle' })
   @ApiParam({ name: 'id', description: 'Kategori ID' })
   @ApiResponse({ status: 200, description: 'Kategori başarıyla güncellendi', type: CategoryResponseDto })
@@ -97,7 +95,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('categories:delete')
   @ApiOperation({ summary: 'Kategoriyi sil' })
   @ApiParam({ name: 'id', description: 'Kategori ID' })
   @ApiResponse({ status: 200, description: 'Kategori başarıyla silindi' })
@@ -108,7 +106,7 @@ export class CategoriesController {
   }
 
   @Delete('all/by-company')
-  @Roles(Role.ADMIN)
+  @Permissions('categories:delete')
   @ApiOperation({ summary: 'Tüm kategorileri sil' })
   @ApiResponse({ status: 200, description: 'Tüm kategoriler başarıyla silindi' })
   removeAll(@Request() req): Promise<{ count: number }> {

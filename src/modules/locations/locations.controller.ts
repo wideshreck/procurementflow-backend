@@ -12,9 +12,7 @@ import {
 import { LocationsService } from './locations.service';
 import { CreateLocationDto, UpdateLocationDto, LocationResponseDto } from './dto/location.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -26,12 +24,12 @@ import {
 @ApiTags('locations')
 @ApiBearerAuth()
 @Controller('locations')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class LocationsController {
   constructor(private readonly locationsService: LocationsService) {}
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Permissions('locations:create')
   @ApiOperation({ summary: 'Yeni lokasyon oluştur' })
   @ApiResponse({ status: 201, description: 'Lokasyon başarıyla oluşturuldu', type: LocationResponseDto })
   @ApiResponse({ status: 400, description: 'Geçersiz veri' })
@@ -57,7 +55,7 @@ export class LocationsController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('locations:update')
   @ApiOperation({ summary: 'Lokasyon bilgilerini güncelle' })
   @ApiParam({ name: 'id', description: 'Lokasyon ID' })
   @ApiResponse({ status: 200, description: 'Lokasyon başarıyla güncellendi', type: LocationResponseDto })
@@ -72,7 +70,7 @@ export class LocationsController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('locations:delete')
   @ApiOperation({ summary: 'Lokasyonu sil' })
   @ApiParam({ name: 'id', description: 'Lokasyon ID' })
   @ApiResponse({ status: 200, description: 'Lokasyon başarıyla silindi' })

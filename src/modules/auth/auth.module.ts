@@ -18,7 +18,6 @@ import {
   TokenService,
   AuditLogService,
   LoginAttemptService,
-  MfaService,
   EmailService,
 } from './services';
 import { CleanupService } from './services/cleanup.service';
@@ -62,7 +61,6 @@ import { AUTH_CONSTANTS } from './constants/auth.constants';
     TokenService,
     AuditLogService,
     LoginAttemptService,
-    MfaService,
     EmailService,
     CleanupService,
     // Guards

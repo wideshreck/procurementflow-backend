@@ -359,10 +359,16 @@ export class CategoriesService {
   }
 
   async removeAll(userId: string): Promise<{ count: number }> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { customRole: true },
+    });
     if (!user) throw new NotFoundException('Kullanıcı bulunamadı');
-    if (user.role !== 'ADMIN')
+
+    const permissions = user.customRole?.permissions as string[];
+    if (!permissions?.includes('categories:delete')) {
       throw new ForbiddenException('Bu işlem için yetkiniz yok');
+    }
 
     return this.prisma.$transaction(async (tx) => {
       await tx.product.updateMany({
@@ -382,10 +388,16 @@ export class CategoriesService {
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { customRole: true },
+    });
     if (!user) throw new NotFoundException('Kullanıcı bulunamadı');
-    if (user.role !== 'ADMIN')
+
+    const permissions = user.customRole?.permissions as string[];
+    if (!permissions?.includes('categories:delete')) {
       throw new ForbiddenException('Bu işlem için yetkiniz yok');
+    }
 
     const category = await this.prisma.category.findFirst({
       where: { CategoryID: id, companyId: user.companyId },

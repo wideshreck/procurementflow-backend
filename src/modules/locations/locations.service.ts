@@ -130,7 +130,7 @@ export class LocationsService {
   async update(id: string, updateLocationDto: UpdateLocationDto, userId: string): Promise<LocationResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { companyId: true, role: true },
+      select: { companyId: true, customRole: true },
     });
 
     if (!user) {
@@ -199,15 +199,15 @@ export class LocationsService {
   async remove(id: string, userId: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { companyId: true, role: true },
+      include: { customRole: true },
     });
 
     if (!user) {
       throw new NotFoundException('Kullanıcı bulunamadı');
     }
 
-    // Sadece ADMIN rolü silebilir
-    if (user.role !== 'ADMIN') {
+    const permissions = user.customRole?.permissions as string[];
+    if (!permissions?.includes('locations:delete')) {
       throw new ForbiddenException('Bu işlem için yetkiniz yok');
     }
 

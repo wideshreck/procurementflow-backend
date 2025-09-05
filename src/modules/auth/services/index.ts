@@ -4,5 +4,4 @@ export * from './session.service';
 export * from './token.service';
 export * from './audit-log.service';
 export * from './login-attempt.service';
-export * from './mfa.service';
 export * from './email.service';

@@ -35,10 +35,6 @@ import {
   PasswordResetRequestDto,
   PasswordResetDto,
   ChangePasswordDto,
-  EmailVerificationDto,
-  MfaSetupResponseDto,
-  MfaEnableDto,
-  MfaDisableDto,
   SessionInfoDto,
   AuditLogDto,
   SuccessResponseDto,
@@ -113,18 +109,9 @@ export class AuthController {
     const result = await this.auth.signIn(
       body.email,
       body.password,
-      body.mfaCode,
       ipAddress,
       userAgent
     );
-
-    // Check if MFA is required
-    if ((result.user as any).mfaRequired) {
-      return {
-        user: { mfaRequired: true } as any,
-        tokens: { accessToken: '', refreshToken: '', csrfToken: '' },
-      };
-    }
 
     // Set cookies
     this.setAuthCookies(reply, result.tokens.refreshToken, result.tokens.csrfToken);
@@ -185,19 +172,6 @@ export class AuthController {
       user: result.user as any, // Cast to any to bypass strict type check for response
       tokens: result.tokens,
     };
-  }
-
-  @Public()
-  @SkipCsrf()
-  @Post('verify-email')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Email adresini doğrula' })
-  @ApiBody({ type: EmailVerificationDto })
-  @ApiResponse({ status: 200, description: 'Email doğrulandı' })
-  @ApiBadRequestResponse({ description: 'Geçersiz veya süresi dolmuş token' })
-  async verifyEmail(@Body() body: EmailVerificationDto): Promise<SuccessResponseDto> {
-    await this.auth.verifyEmail(body.token);
-    return { success: true, message: 'Email adresiniz başarıyla doğrulandı' };
   }
 
   @Public()
@@ -275,63 +249,6 @@ export class AuthController {
   me(@CurrentUser() user: User) {
     const { password, ...userWithoutPassword } = user;
     return userWithoutPassword;
-  }
-
-  // ===== MFA ENDPOINTS =====
-  @Get('mfa/setup')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'İki faktörlü doğrulama kurulumu başlat' })
-  @ApiResponse({ status: 200, description: 'MFA kurulum bilgileri', type: MfaSetupResponseDto })
-  async setupMfa(@CurrentUser() user: User): Promise<MfaSetupResponseDto> {
-    return this.auth.setupMfa(user.id);
-  }
-
-  @Post('mfa/enable')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'İki faktörlü doğrulamayı etkinleştir' })
-  @ApiBody({ type: MfaEnableDto })
-  @ApiResponse({ status: 200, description: 'MFA etkinleştirildi' })
-  @ApiBadRequestResponse({ description: 'Geçersiz doğrulama kodu' })
-  async enableMfa(
-    @CurrentUser() user: User,
-    @Body() body: MfaEnableDto,
-    @Req() req: FastifyRequest
-  ): Promise<SuccessResponseDto> {
-    const ipAddress = req.ip;
-    const userAgent = req.headers['user-agent'];
-
-    await this.auth.enableMfa(
-      user.id,
-      body.secret,
-      body.verificationCode,
-      body.backupCodes,
-      ipAddress,
-      userAgent
-    );
-
-    return { success: true, message: 'İki faktörlü doğrulama etkinleştirildi' };
-  }
-
-  @Post('mfa/disable')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'İki faktörlü doğrulamayı devre dışı bırak' })
-  @ApiBody({ type: MfaDisableDto })
-  @ApiResponse({ status: 200, description: 'MFA devre dışı bırakıldı' })
-  @ApiUnauthorizedResponse({ description: 'Geçersiz şifre' })
-  async disableMfa(
-    @CurrentUser() user: User,
-    @Body() body: MfaDisableDto,
-    @Req() req: FastifyRequest
-  ): Promise<SuccessResponseDto> {
-    const ipAddress = req.ip;
-    const userAgent = req.headers['user-agent'];
-
-    await this.auth.disableMfa(user.id, body.password, ipAddress, userAgent);
-
-    return { success: true, message: 'İki faktörlü doğrulama devre dışı bırakıldı' };
   }
 
   // ===== SESSION MANAGEMENT =====

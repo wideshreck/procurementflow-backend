@@ -12,9 +12,7 @@ import {
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto, UpdateDepartmentDto, DepartmentResponseDto } from './dto/department.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -26,12 +24,12 @@ import {
 @ApiTags('departments')
 @ApiBearerAuth()
 @Controller('departments')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Permissions('departments:create')
   @ApiOperation({ summary: 'Yeni departman oluştur' })
   @ApiResponse({ status: 201, description: 'Departman başarıyla oluşturuldu', type: DepartmentResponseDto })
   @ApiResponse({ status: 400, description: 'Geçersiz veri' })
@@ -57,7 +55,7 @@ export class DepartmentsController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('departments:update')
   @ApiOperation({ summary: 'Departman bilgilerini güncelle' })
   @ApiParam({ name: 'id', description: 'Departman ID' })
   @ApiResponse({ status: 200, description: 'Departman başarıyla güncellendi', type: DepartmentResponseDto })
@@ -72,7 +70,7 @@ export class DepartmentsController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('departments:delete')
   @ApiOperation({ summary: 'Departmanı sil' })
   @ApiParam({ name: 'id', description: 'Departman ID' })
   @ApiResponse({ status: 200, description: 'Departman başarıyla silindi' })

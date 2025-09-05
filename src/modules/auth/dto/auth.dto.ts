@@ -39,11 +39,6 @@ const department = z
   .optional()
   .transform((v) => v?.trim());
 
-const mfaCode = z
-  .string()
-  .length(6, 'Doğrulama kodu 6 haneli olmalıdır')
-  .regex(/^\d{6}$/, 'Doğrulama kodu sadece rakamlardan oluşmalıdır');
-
 // Sign up schema
 export const SignUpSchema = z.object({
   email,
@@ -59,7 +54,6 @@ export class SignUpDto extends createZodDto(SignUpSchema) {}
 export const SignInSchema = z.object({
   email,
   password,
-  mfaCode: mfaCode.optional(),
 });
 export class SignInDto extends createZodDto(SignInSchema) {}
 
@@ -72,9 +66,7 @@ export const TokenResponseSchema = z.object({
     fullName: z.string(),
     company: z.object({ name: z.string() }), // Düzeltme burada yapıldı.
     role: z.enum(['USER', 'ADMIN']),
-    emailVerified: z.boolean(),
     isActive: z.boolean(),
-    mfaRequired: z.boolean().optional(),
   }),
   tokens: z.object({
     accessToken: z.string(),
@@ -103,34 +95,6 @@ export const ChangePasswordSchema = z.object({
   newPassword: password,
 });
 export class ChangePasswordDto extends createZodDto(ChangePasswordSchema) {}
-
-// Email verification schema
-export const EmailVerificationSchema = z.object({
-  token: z.string().min(1, 'Doğrulama token\'ı gereklidir'),
-});
-export class EmailVerificationDto extends createZodDto(EmailVerificationSchema) {}
-
-// MFA setup response schema
-export const MfaSetupResponseSchema = z.object({
-  secret: z.string(),
-  qrCode: z.string(),
-  backupCodes: z.array(z.string()),
-});
-export class MfaSetupResponseDto extends createZodDto(MfaSetupResponseSchema) {}
-
-// MFA enable schema
-export const MfaEnableSchema = z.object({
-  secret: z.string().min(1, 'Secret gereklidir'),
-  verificationCode: mfaCode,
-  backupCodes: z.array(z.string()).min(1, 'Yedek kodlar gereklidir'),
-});
-export class MfaEnableDto extends createZodDto(MfaEnableSchema) {}
-
-// MFA disable schema
-export const MfaDisableSchema = z.object({
-  password: z.string().min(1, 'Şifre gereklidir'),
-});
-export class MfaDisableDto extends createZodDto(MfaDisableSchema) {}
 
 // Session info schema
 export const SessionInfoSchema = z.object({

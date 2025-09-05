@@ -48,7 +48,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Account is disabled');
     }
 
-    // Attach sessionId to user object for use in controllers
-    return { ...user, sessionId: payload.sessionId };
+    // Attach sessionId and permissions to user object for use in controllers
+    return { ...user, sessionId: payload.sessionId, permissions: payload.permissions };
   }
 }

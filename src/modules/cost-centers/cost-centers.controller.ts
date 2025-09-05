@@ -15,9 +15,7 @@ import {
 import { CostCentersService } from './cost-centers.service';
 import { CreateCostCenterDto, UpdateCostCenterDto, CostCenterResponseDto } from './dto/cost-center.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -33,12 +31,12 @@ import * as Papa from 'papaparse';
 @ApiTags('cost-centers')
 @ApiBearerAuth()
 @Controller('cost-centers')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class CostCentersController {
   constructor(private readonly costCentersService: CostCentersService) {}
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Permissions('cost-centers:create')
   @ApiOperation({ summary: 'Yeni maliyet merkezi oluştur' })
   @ApiResponse({ status: 201, description: 'Maliyet merkezi başarıyla oluşturuldu', type: CostCenterResponseDto })
   @ApiResponse({ status: 400, description: 'Geçersiz veri' })
@@ -64,7 +62,7 @@ export class CostCentersController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('cost-centers:update')
   @ApiOperation({ summary: 'Maliyet merkezi bilgilerini güncelle' })
   @ApiParam({ name: 'id', description: 'Maliyet merkezi ID' })
   @ApiResponse({ status: 200, description: 'Maliyet merkezi başarıyla güncellendi', type: CostCenterResponseDto })
@@ -79,7 +77,7 @@ export class CostCentersController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('cost-centers:delete')
   @ApiOperation({ summary: 'Maliyet merkezini sil' })
   @ApiParam({ name: 'id', description: 'Maliyet merkezi ID' })
   @ApiResponse({ status: 200, description: 'Maliyet merkezi başarıyla silindi' })
@@ -128,7 +126,7 @@ export class CostCentersController {
   }
 
   @Post('import')
-  @Roles(Role.ADMIN)
+  @Permissions('cost-centers:create')
   @ApiOperation({ summary: 'CSV dosyasından maliyet merkezlerini içe aktar' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

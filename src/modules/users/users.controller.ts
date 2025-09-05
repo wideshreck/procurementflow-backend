@@ -21,20 +21,20 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { UpdateUserRoleDto } from './dto/role.dto';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { UpdateUserCustomRoleDto } from './dto/role.dto';
 
 @ApiTags('users')
 @ApiBearerAuth('access-token')
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 
   @Get()
-  @Roles('ADMIN')
+  @Permissions('users:list')
   @ApiOperation({ summary: 'List all users (ADMIN only)' })
   @ApiQuery({
     name: 'skip',
@@ -59,7 +59,13 @@ export class UsersController {
           id: { type: 'string' },
           email: { type: 'string' },
           fullName: { type: 'string' },
-          role: { type: 'string', enum: ['USER', 'ADMIN'] },
+          customRole: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+            },
+          },
           company: { type: 'string', nullable: true },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
@@ -79,7 +85,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles('ADMIN')
+  @Permissions('users:read')
   @ApiOperation({ summary: 'Get a user by ID (ADMIN only)' })
   @ApiParam({
     name: 'id',
@@ -96,10 +102,10 @@ export class UsersController {
     return this.users.getPublicUserById(id);
   }
 
-  @Patch(':id/role')
-  @Roles('ADMIN')
+  @Patch(':id/custom-role')
+  @Permissions('users:update-role')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update a user role (ADMIN only)' })
+  @ApiOperation({ summary: 'Update a user custom role' })
   @ApiParam({
     name: 'id',
     description: 'User ID (UUID/CUID)',
@@ -109,10 +115,10 @@ export class UsersController {
     status: 200,
     description: 'Updated user (without sensitive fields)',
   })
-  @ApiResponse({ status: 403, description: 'Forbidden (requires ADMIN role)' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  async updateRole(@Param('id') id: string, @Body() dto: UpdateUserRoleDto) {
-    return this.users.updateUserRole(id, dto.role);
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User or CustomRole not found' })
+  async updateCustomRole(@Param('id') id: string, @Body() dto: UpdateUserCustomRoleDto) {
+    return this.users.updateUserCustomRole(id, dto.customRoleId);
   }
 
   @Get('company')

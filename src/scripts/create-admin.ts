@@ -58,14 +58,62 @@ async function main() {
     parallelism: 1,
   });
 
+  const adminPermissions = [
+    'requests:create',
+    'requests:list',
+    'requests:debug',
+    'cost-centers:list',
+    'approval-processes:edit',
+    'categories:edit',
+    'categories:read',
+    'auth:debug',
+    'suppliers:list',
+    'custom-roles:list',
+    'users:list',
+    'users:read',
+    'users:update-role',
+    'categories:create',
+    'categories:update',
+    'categories:delete',
+    'cost-centers:create',
+    'cost-centers:update',
+    'cost-centers:delete',
+    'departments:create',
+    'departments:update',
+    'departments:delete',
+    'locations:create',
+    'locations:update',
+    'locations:delete',
+  ];
+
+  let adminRole = await prisma.customRole.findFirst({
+    where: { name: 'Admin', companyId: company.id },
+  });
+
+  if (adminRole) {
+    adminRole = await prisma.customRole.update({
+      where: { id: adminRole.id },
+      data: { permissions: adminPermissions },
+    });
+    console.log('"Admin" custom role updated with full permissions.');
+  } else {
+    adminRole = await prisma.customRole.create({
+      data: {
+        name: 'Admin',
+        companyId: company.id,
+        permissions: adminPermissions,
+      },
+    });
+    console.log('"Admin" custom role created.');
+  }
+
   const adminUser = await prisma.user.create({
     data: {
       email,
       password: hashedPassword,
       fullName,
       companyId: company.id,
-      role: 'ADMIN',
-      emailVerified: true,
+      customRoleId: adminRole.id,
     },
   });
 
