@@ -56,17 +56,22 @@ export const envSchema = z.object({
 
   SWAGGER_ENABLED: z.coerce.boolean().default(true),
 
-  // Placeholder key so environments without OpenAI access can still boot
+  // AI Provider Configuration
+  AI_PROVIDER: z.enum(['openai', 'gemini']).default('openai'),
+  
+  // OpenAI Configuration
   OPENAI_API_KEY: z
     .string()
     .min(1, 'OPENAI_API_KEY is required')
     .default('test-openai-api-key'),
+  OPENAI_MODEL: z.string().default('gpt-4o'),
+  OPENAI_SEARCH_MODEL: z.string().default('gpt-4o'),
   
-  // Placeholder key so environments without Gemini access can still boot
+  // Gemini Configuration
   GEMINI_API_KEY: z
     .string()
-    .min(1, 'GEMINI_API_KEY is required')
-    .default('test-gemini-api-key'),
+    .optional()
+    .default(''),
 });
 
 // Export the inferred type for use in ConfigService

@@ -101,6 +101,10 @@ export class Phase4CollectedDataDto {
   justification?: string;
 
   @IsOptional()
+  @IsString()
+  purchase_frequency?: string;
+
+  @IsOptional()
   technical_specifications?: Array<{
     spec_key: string;
     spec_value: string;

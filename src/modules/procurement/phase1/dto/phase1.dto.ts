@@ -54,6 +54,9 @@ export class Phase1DataDto {
   @MaxLength(500)
   request_justification: string;
 
+  @IsString()
+  purchase_frequency: string;
+
   category: CategoryDto;
 
   cost_center: CostCenterDto;

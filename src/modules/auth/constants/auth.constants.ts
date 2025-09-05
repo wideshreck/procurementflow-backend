@@ -21,7 +21,7 @@ export const AUTH_CONSTANTS = {
   RATE_LIMIT_MAX: 10, // max requests per TTL
   
   // Session
-  SESSION_IDLE_TIMEOUT: 30 * 60 * 1000, // 30 minutes
+  SESSION_IDLE_TIMEOUT: 2 * 60 * 60 * 1000, // 2 hours (extended for long chat sessions)
   MAX_SESSIONS_PER_USER: 5,
   
   // Password rules

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma/prisma.service';
-import { GeminiService } from '../../common/gemini/gemini.service';
+import { AIService } from '../../common/ai-providers/ai.service';
 import { PHASE4_SYSTEM_PROMPT } from '../prompts/phase4.prompt';
 import { 
   Phase4DataDto, 
@@ -22,7 +22,7 @@ export class Phase4Service {
 
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly geminiService: GeminiService,
+    private readonly aiService: AIService,
   ) {}
 
   async processPhase4(
@@ -69,7 +69,7 @@ GÖREV: Teslimat lokasyonu, teslim tarihi ve aciliyet bilgilerini topla. Eksik b
 `;
 
       // Gemini AI'a sor (websearch kapalı)
-      const response = await this.geminiService.generateResponse({
+      const response = await this.aiService.generateResponse({
         systemPrompt: PHASE4_SYSTEM_PROMPT,
         message: contextMessage,
         history: [],

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Conversation } from '@prisma/client';
-import { GeminiService } from '../../common/gemini/gemini.service';
+import { AIService } from '../../common/ai-providers/ai.service';
 import { ChatbotResponse, ChatbotMode } from '../../dto/chatbot.dto';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { PHASE3_SYSTEM_PROMPT } from '../prompts/phase3.prompt';
@@ -9,7 +9,7 @@ export class Phase3Service {
   private readonly logger = new Logger(Phase3Service.name);
 
   constructor(
-    private readonly geminiService: GeminiService,
+    private readonly aiService: AIService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -114,7 +114,7 @@ export class Phase3Service {
         conversation.collectedData,
       )}\n\nUser Message: ${message}`;
 
-      const aiResponse = await this.geminiService.generateResponse({
+      const aiResponse = await this.aiService.generateResponse({
         systemPrompt: PHASE3_SYSTEM_PROMPT(),
         history,
         message: contextMessage,
@@ -154,18 +154,15 @@ export class Phase3Service {
     const collectedData = conversation.collectedData as any;
     const phase1Data = collectedData?.phase1 || {};
     
-    const contextMessage = `Phase 2 is complete. Here is all collected data:\n
-Phase 1 Data:\n${JSON.stringify(
+    // IMPORTANT: First, we should generate web-based profile suggestions, NOT direct specifications
+    const contextMessage = `Phase 2 tamamlandı. İşte toplanan tüm veriler:\n
+Phase 1 Verileri:\n${JSON.stringify(
       phase1Data,
       null,
       2
-    )}\n\nPhase 2 Data:\n${JSON.stringify(
-      phase2Data,
-      null,
-      2
-    )}\n\nPlease generate detailed technical specifications for the RFQ.`;
+    )}\n\nÖNEMLİ: Öncelikle internetten araştırma yaparak markadan bağımsız 2-3 teknik profil önerisi sun (SUGGESTION_FOR_PREDEFINED_PROFILES modunu kullan). Kullanıcı bunlardan birini seçerse veya reddederse ancak o zaman detaylı teknik şartname oluştur.`;
 
-    const aiResponse = await this.geminiService.generateResponse({
+    const aiResponse = await this.aiService.generateResponse({
       systemPrompt: PHASE3_SYSTEM_PROMPT(),
       history: [],
       message: contextMessage,
@@ -252,7 +249,7 @@ Phase 1 Data:\n${JSON.stringify(
       }
     }`;
 
-    const aiResponse = await this.geminiService.generateResponse({
+    const aiResponse = await this.aiService.generateResponse({
       systemPrompt: PHASE3_SYSTEM_PROMPT(),
       history: [],
       message: contextMessage,

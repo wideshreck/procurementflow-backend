@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProcurementRequestDto } from './dto/create-procurement-request.dto';
 import type { User } from '@prisma/client';
-import { GeminiService } from './common/gemini/gemini.service';
+import { AIService } from './common/ai-providers/ai.service';
 
 @Injectable()
 export class ProcurementService {
@@ -10,7 +10,7 @@ export class ProcurementService {
 
   constructor(
     private prisma: PrismaService,
-    private geminiService: GeminiService,
+    private aiService: AIService,
   ) {}
 
   async findAll() {
@@ -68,6 +68,7 @@ export class ProcurementService {
       simple_definition,
       procurement_type,
       justification,
+      purchase_frequency,
       currency,
       unitPrice,
       totalPrice,
@@ -158,6 +159,7 @@ export class ProcurementService {
         simpleDefinition: simple_definition,
         procurementType: procurement_type,
         justification,
+        purchaseFrequency: purchase_frequency,
         currency,
         unitPrice,
         totalPrice,
@@ -219,11 +221,13 @@ Example responses:
 Response:`;
 
     try {
-      const response = await this.geminiService.generateResponse({
-        systemPrompt: prompt,
+      const response = await this.aiService.generateResponse({
+        systemPrompt: 'You are a pricing expert AI assistant. Provide accurate price estimations based on technical specifications.',
         history: [],
-        message: 'Estimate the price',
+        message: prompt,
       });
+      
+      this.logger.log(`AI Response for price estimation: ${JSON.stringify(response)}`);
       
       // Parse the AI response
       let parsedResponse: { price?: number; currency?: string } = {};
@@ -259,32 +263,37 @@ Response:`;
       }
       
       // Apply reasonable bounds based on currency
-      let minPrice = 100;
-      let maxPrice = 1000000;
+      let minPrice = 1;
+      let maxPrice = 10000000;
       
       if (estimatedCurrency === 'TRY') {
-        minPrice = 1000;
-        maxPrice = 5000000;
+        minPrice = 1;  // Allow any positive price
+        maxPrice = 10000000;
       } else if (estimatedCurrency === 'USD' || estimatedCurrency === 'EUR') {
-        minPrice = 50;
-        maxPrice = 100000;
+        minPrice = 1;
+        maxPrice = 1000000;
       }
       
       // Ensure the price is within reasonable bounds
-      const finalPrice = Math.max(minPrice, Math.min(maxPrice, estimatedPrice || minPrice));
+      const finalPrice = estimatedPrice > 0 ? Math.min(maxPrice, estimatedPrice) : 1000;
       
       return { 
         estimatedPrice: finalPrice,
         currency: estimatedCurrency
       };
     } catch (error) {
-      this.logger.error('Error estimating price:', error);
+      this.logger.error('Error estimating price:', error.message || error);
+      this.logger.error('Stack trace:', error.stack);
+      
       // Return a default price based on currency
       const defaultPrices = {
         TRY: 25000,
         USD: 1000,
         EUR: 900,
       };
+      
+      this.logger.warn(`Using default price for ${data.currency}: ${defaultPrices[data.currency] || 1000}`);
+      
       return { 
         estimatedPrice: defaultPrices[data.currency] || 1000,
         currency: data.currency || 'TRY'

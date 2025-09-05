@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Conversation } from '@prisma/client';
-import { GeminiService } from '../../common/gemini/gemini.service';
+import { AIService } from '../../common/ai-providers/ai.service';
 import { ChatbotResponse, ChatbotMode } from '../../dto/chatbot.dto';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { PHASE2_SYSTEM_PROMPT } from '../prompts/phase2.prompt';
@@ -10,7 +10,7 @@ export class Phase2Service {
   private readonly logger = new Logger(Phase2Service.name);
 
   constructor(
-    private readonly geminiService: GeminiService,
+    private readonly aiService: AIService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -92,7 +92,7 @@ export class Phase2Service {
         conversation.collectedData,
       )}\n\nUser Message: ${message}`;
 
-      const aiResponse = await this.geminiService.generateResponse({
+      const aiResponse = await this.aiService.generateResponse({
         systemPrompt: PHASE2_SYSTEM_PROMPT,
         history,
         message: contextMessage,
@@ -135,7 +135,7 @@ export class Phase2Service {
       2
     )}\n\nPlease provide initial product suggestions based on this information.`;
 
-    const aiResponse = await this.geminiService.generateResponse({
+    const aiResponse = await this.aiService.generateResponse({
       systemPrompt: PHASE2_SYSTEM_PROMPT,
       history: [],
       message: contextMessage,

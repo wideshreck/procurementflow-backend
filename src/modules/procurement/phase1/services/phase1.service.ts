@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma/prisma.service';
-import { GeminiService } from '../../common/gemini/gemini.service';
+import { AIService } from '../../common/ai-providers/ai.service';
 import { Phase1DataDto, Phase1ResponseDto } from '../dto/phase1.dto';
 import { PHASE1_SYSTEM_PROMPT } from '../prompts/phase1.prompt';
 import { Conversation } from '@prisma/client';
@@ -9,7 +9,7 @@ import { Conversation } from '@prisma/client';
 export class Phase1Service {
   constructor(
     private prisma: PrismaService,
-    private geminiService: GeminiService
+    private aiService: AIService
   ) {}
 
   private async getConversation(conversationId: string): Promise<Conversation | null> {
@@ -129,7 +129,7 @@ ${costCentersString}
 `;
 
     // AI ile analiz et
-    const aiResponse = await this.geminiService.generateResponse({
+    const aiResponse = await this.aiService.generateResponse({
       systemPrompt: PHASE1_SYSTEM_PROMPT(),
       history: history
         .filter(msg => msg.role === 'USER' || msg.role === 'ASSISTANT')

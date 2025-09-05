@@ -77,6 +77,10 @@ export class CreateProcurementRequestDto {
   justification: string;
 
   @IsString()
+  @IsOptional()
+  purchase_frequency?: string;
+
+  @IsString()
   @IsNotEmpty()
   currency: string;
 

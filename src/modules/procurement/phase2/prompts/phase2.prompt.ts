@@ -74,6 +74,7 @@ Sen, modern bir satınalma asistanı yapay zekasısın. Görevin, Faz 2: Web Des
         "simple_definition": "5 yıllık modelleri değiştirmek için.",
         "procurement_type": "Ürün Alımı",
         "request_justification": "Yoğun grafik ve veri işleme görevleri için tasarlanmış, geleceğe dönük bir konfigürasyondur.",
+        "purchase_frequency": "Tek Seferlik",
         "category": {
             "category_id": "cat-3-1",
             "category_name": "Bilgisayar ve Aksesuar"
