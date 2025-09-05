@@ -142,8 +142,6 @@ ${costCentersString}
 
     // AI yanıtını parse et
     const parsedData = this.parseAIResponse(aiResponse);
-    // console.log('Phase1Service - AI Response:', JSON.stringify(parsedData, null, 2));
-    // console.log('Phase1Service - User Input:', userInput);
     
     if (parsedData && parsedData.MODE === 'PHASE_ONE_DONE') {
       // AI tüm verileri belirledi, fazı tamamla
@@ -203,19 +201,6 @@ ${costCentersString}
       return null;
     }
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   /**
    * Complete Phase 1 and return collected data

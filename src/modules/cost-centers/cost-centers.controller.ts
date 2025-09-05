@@ -8,10 +8,9 @@ import {
   Delete,
   UseGuards,
   Request,
-  UseInterceptors,
-  UploadedFile,
   Res,
   BadRequestException,
+  Req,
 } from '@nestjs/common';
 import { CostCentersService } from './cost-centers.service';
 import { CreateCostCenterDto, UpdateCostCenterDto, CostCenterResponseDto } from './dto/cost-center.dto';
@@ -26,8 +25,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
-import type { Response } from 'express';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import * as Papa from 'papaparse';
 
 @ApiTags('cost-centers')
@@ -92,7 +90,7 @@ export class CostCentersController {
   @Get('template/download')
   @ApiOperation({ summary: 'CSV şablonunu indir' })
   @ApiResponse({ status: 200, description: 'CSV şablon dosyası' })
-  async downloadTemplate(@Res() res: Response) {
+  async downloadTemplate(@Res() res: FastifyReply) {
     const template = [
       {
         name: 'Yazılım Geliştirme Bütçesi',
@@ -122,9 +120,9 @@ export class CostCentersController {
       delimiter: ',',
     });
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="maliyet-merkezi-sablonu.csv"');
-    res.send('\uFEFF' + csv); // Add BOM for Excel UTF-8 support
+    res.header('Content-Type', 'text/csv; charset=utf-8');
+    res.header('Content-Disposition', 'attachment; filename="maliyet-merkezi-sablonu.csv"');
+    return res.send('\uFEFF' + csv); // Add BOM for Excel UTF-8 support
   }
 
   @Post('import')
@@ -142,23 +140,32 @@ export class CostCentersController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
-  async importCsv(@UploadedFile() file: Express.Multer.File, @Request() req) {
-    if (!file) {
+  async importCsv(@Req() req: FastifyRequest & { user: any }) {
+    const data = await req.file();
+    
+    if (!data) {
       throw new BadRequestException('CSV dosyası gerekli');
     }
 
-    if (!file.originalname.endsWith('.csv')) {
+    if (!data.filename.endsWith('.csv')) {
       throw new BadRequestException('Sadece CSV dosyaları kabul edilir');
     }
 
-    return this.costCentersService.importFromCsv(file, req.user.id);
+    // Read file buffer
+    const buffer = await data.toBuffer();
+    const file = {
+      buffer,
+      originalname: data.filename,
+      mimetype: data.mimetype,
+    };
+
+    return this.costCentersService.importFromCsv(file as any, req.user.id);
   }
 
-  @Get('export')
+  @Get('export/csv')
   @ApiOperation({ summary: 'Maliyet merkezlerini CSV olarak dışa aktar' })
   @ApiResponse({ status: 200, description: 'CSV dosyası' })
-  async exportCsv(@Request() req, @Res() res: Response) {
+  async exportCsv(@Request() req, @Res() res: FastifyReply) {
     const costCenters = await this.costCentersService.findAll(req.user.id);
     
     const data = costCenters.map(cc => ({
@@ -178,8 +185,8 @@ export class CostCentersController {
       delimiter: ',',
     });
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="maliyet-merkezleri.csv"');
-    res.send('\uFEFF' + csv); // Add BOM for Excel UTF-8 support
+    res.header('Content-Type', 'text/csv; charset=utf-8');
+    res.header('Content-Disposition', 'attachment; filename="maliyet-merkezleri.csv"');
+    return res.send('\uFEFF' + csv); // Add BOM for Excel UTF-8 support
   }
 }

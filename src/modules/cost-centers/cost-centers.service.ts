@@ -224,15 +224,48 @@ export class CostCentersService {
 
     // Bütçe güncelleniyorsa, kalan bütçeyi de güncelle
     let dataToUpdate: any = { ...updateCostCenterDto };
+    
+    // Handle budget updates
     if (updateCostCenterDto.budget !== undefined) {
-      const budgetDiff = new Decimal(updateCostCenterDto.budget).minus(existingCostCenter.budget);
-      const newRemainingBudget = new Decimal(existingCostCenter.remainingBudget).plus(budgetDiff);
-      
-      if (newRemainingBudget.lessThan(0)) {
-        throw new BadRequestException('Yeni bütçe, harcanan miktardan az olamaz');
+      // If spentBudget is also provided, use it to calculate remaining
+      if (updateCostCenterDto.spentBudget !== undefined) {
+        const newRemainingBudget = new Decimal(updateCostCenterDto.budget).minus(updateCostCenterDto.spentBudget);
+        if (newRemainingBudget.lessThan(0)) {
+          throw new BadRequestException('Bütçe, harcanan miktardan az olamaz');
+        }
+        dataToUpdate.remainingBudget = newRemainingBudget;
+      } else {
+        // Calculate remaining budget based on existing spent budget
+        const budgetDiff = new Decimal(updateCostCenterDto.budget).minus(existingCostCenter.budget);
+        const newRemainingBudget = new Decimal(existingCostCenter.remainingBudget).plus(budgetDiff);
+        
+        if (newRemainingBudget.lessThan(0)) {
+          throw new BadRequestException('Yeni bütçe, harcanan miktardan az olamaz');
+        }
+        dataToUpdate.remainingBudget = newRemainingBudget;
       }
-
+    }
+    
+    // Handle spent budget updates
+    if (updateCostCenterDto.spentBudget !== undefined && updateCostCenterDto.budget === undefined) {
+      const newRemainingBudget = new Decimal(existingCostCenter.budget).minus(updateCostCenterDto.spentBudget);
+      if (newRemainingBudget.lessThan(0)) {
+        throw new BadRequestException('Harcanan miktar bütçeyi aşamaz');
+      }
       dataToUpdate.remainingBudget = newRemainingBudget;
+    }
+    
+    // Handle remaining budget updates
+    if (updateCostCenterDto.remainingBudget !== undefined) {
+      const budget = updateCostCenterDto.budget !== undefined ? 
+        new Decimal(updateCostCenterDto.budget) : 
+        existingCostCenter.budget;
+      
+      const newSpentBudget = new Decimal(budget).minus(updateCostCenterDto.remainingBudget);
+      if (newSpentBudget.lessThan(0)) {
+        throw new BadRequestException('Kalan bütçe, toplam bütçeyi aşamaz');
+      }
+      dataToUpdate.spentBudget = newSpentBudget;
     }
 
     const costCenter = await this.prisma.costCenter.update({
@@ -353,7 +386,7 @@ export class CostCentersService {
           results.failed++;
           results.errors.push({
             row: index + 2,
-            error: 'Bütçe sahibi bulunamadı',
+            error: `Bütçe sahibi bulunamadı: ${row.budgetOwnerEmail}. Lütfen sistemde kayıtlı bir kullanıcı email adresi kullanın.`,
             data: row,
           });
           continue;
@@ -368,10 +401,18 @@ export class CostCentersService {
         });
 
         if (!department) {
+          // Get available departments for helpful error message
+          const availableDepartments = await this.prisma.department.findMany({
+            where: { companyId: user.companyId },
+            select: { name: true },
+          });
+          
+          const departmentNames = availableDepartments.map(d => d.name).join(', ');
+          
           results.failed++;
           results.errors.push({
             row: index + 2,
-            error: 'Departman bulunamadı',
+            error: `Departman bulunamadı: ${row.departmentName}. Mevcut departmanlar: ${departmentNames}`,
             data: row,
           });
           continue;
@@ -389,7 +430,7 @@ export class CostCentersService {
           results.failed++;
           results.errors.push({
             row: index + 2,
-            error: 'Maliyet merkezi zaten mevcut',
+            error: `Maliyet merkezi zaten mevcut: ${row.name}. Bu isimde bir maliyet merkezi sistemde kayıtlı. Lütfen farklı bir isim kullanın.`,
             data: row,
           });
           continue;

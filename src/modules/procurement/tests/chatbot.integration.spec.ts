@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProcurementService } from '../procurement.service';
-import { OrchestratorService } from '../services/orchestrator.service';
-import { Phase1Service } from '../services/phase1.service';
-import { Phase2Service } from '../services/phase2.service';
-import { Phase3Service } from '../services/phase3.service';
-import { StateMachineService } from '../services/state-machine.service';
+import { OrchestratorService } from '../common/services/orchestrator.service';
+import { Phase1Service } from '../phase1/services/phase1.service';
+import { Phase2Service } from '../phase2/services/phase2.service';
+import { Phase3Service } from '../phase3/services/phase3.service';
+import { StateMachineService } from '../common/services/state-machine.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ConversationStatus, ProcurementPhase } from '@prisma/client';
-import { ProcurementMode } from '../dto/chatbot.dto';
+import { ChatbotMode } from '../dto/chatbot.dto';
 
 describe('Chatbot.md Integration Tests', () => {
   let procurementService: ProcurementService;
@@ -56,7 +56,7 @@ describe('Chatbot.md Integration Tests', () => {
         {},
       );
 
-      expect(result.MODE).toBe(ProcurementMode.ASKING_FOR_INFO);
+      expect(result.MODE).toBe(ChatbotMode.ASKING_FOR_INFO);
       expect(result.QUESTIONS).toBeDefined();
       expect(result.QUESTIONS.length).toBeGreaterThan(0);
     });
@@ -68,7 +68,7 @@ describe('Chatbot.md Integration Tests', () => {
         {},
       );
 
-      expect(result.MODE).toBe(ProcurementMode.ASKING_FOR_INFO);
+      expect(result.MODE).toBe(ChatbotMode.ASKING_FOR_INFO);
       const questions = result.QUESTIONS;
       
       // cost_center sorusu olmalı
@@ -92,7 +92,7 @@ describe('Chatbot.md Integration Tests', () => {
 
       const result = await phase1Service.processPhase1('', completeData);
 
-      expect(result.MODE).toBe(ProcurementMode.PHASE_ONE_DONE);
+      expect(result.MODE).toBe(ChatbotMode.PHASE_ONE_DONE);
       expect(result.COLLECTED_DATA).toEqual(completeData);
     });
   });
@@ -114,7 +114,7 @@ describe('Chatbot.md Integration Tests', () => {
 
       expect(result).toBeDefined();
       if (result) {
-        expect(result.MODE).toBe(ProcurementMode.SUGGESTION);
+        expect(result.MODE).toBe(ChatbotMode.SUGGESTION);
         expect(result.SUGGESTIONS).toBeDefined();
         expect(result.SUGGESTIONS.length).toBeGreaterThan(0);
         
@@ -161,7 +161,7 @@ describe('Chatbot.md Integration Tests', () => {
 
       const result = await phase3Service.processPhase3(phase1Data);
 
-      expect(result.MODE).toBe(ProcurementMode.SUGGESTION);
+      expect(result.MODE).toBe(ChatbotMode.SUGGESTION);
       expect(result.SUGGESTIONS).toBeDefined();
       expect(result.SUGGESTIONS.length).toBeGreaterThanOrEqual(2);
 
@@ -198,7 +198,7 @@ describe('Chatbot.md Integration Tests', () => {
 
       const result = await phase3Service.processPhase3(phase1Data, 'MANUAL');
 
-      expect(result.MODE).toBe(ProcurementMode.ASKING_FOR_INFO);
+      expect(result.MODE).toBe(ChatbotMode.ASKING_FOR_INFO);
       expect(result.QUESTIONS).toBeDefined();
       expect(result.QUESTIONS.length).toBeGreaterThan(0);
     });
@@ -229,7 +229,7 @@ describe('Chatbot.md Integration Tests', () => {
       // Manuel girişle tüm özellikler toplandı
       const result = await phase3Service.processPhase3(phase1Data, 'MANUAL', specs);
 
-      expect(result.MODE).toBe(ProcurementMode.PHASE_THREE_DONE);
+      expect(result.MODE).toBe(ChatbotMode.PHASE_THREE_DONE);
       expect(result.COLLECTED_DATA).toBeDefined();
       expect(result.COLLECTED_DATA.technical_specifications).toEqual(specs);
     });
@@ -242,19 +242,19 @@ describe('Chatbot.md Integration Tests', () => {
       // Faz 1 -> Faz 2 geçişi
       expect(stateMachine.canTransition(
         ProcurementPhase.IDENTIFICATION,
-        ProcurementMode.PHASE_ONE_DONE,
+        ChatbotMode.PHASE_ONE_DONE,
       )).toBe(true);
 
       // Faz 3 -> Final geçişi
       expect(stateMachine.canTransition(
         ProcurementPhase.SPECS,
-        ProcurementMode.PHASE_THREE_DONE,
+        ChatbotMode.PHASE_THREE_DONE,
       )).toBe(true);
 
       // Geçersiz geçiş
       expect(stateMachine.canTransition(
         ProcurementPhase.IDENTIFICATION,
-        ProcurementMode.ASKING_FOR_INFO,
+        ChatbotMode.ASKING_FOR_INFO,
       )).toBe(false);
     });
 
