@@ -14,8 +14,16 @@ export class SuppliersController {
   }
 
   @Get()
-  findAll() {
-    return this.suppliersService.findAll({});
+  async findAll(@Request() req: any) {
+    const user = await this.suppliersService.getUserById(req.user.id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    return this.suppliersService.findAll({
+      where: {
+        companyId: user.companyId
+      }
+    });
   }
 
   @Get(':id')

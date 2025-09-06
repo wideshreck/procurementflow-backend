@@ -160,7 +160,7 @@ Phase 1 Verileri:\n${JSON.stringify(
       phase1Data,
       null,
       2
-    )}\n\nÖNEMLİ: Öncelikle internetten araştırma yaparak markadan bağımsız 2-3 teknik profil önerisi sun (SUGGESTION_FOR_PREDEFINED_PROFILES modunu kullan). Kullanıcı bunlardan birini seçerse veya reddederse ancak o zaman detaylı teknik şartname oluştur.`;
+    )}\n\nÖNEMLİ: Öncelikle internetten araştırma yaparak markadan bağımsız 3 teknik profil önerisi sun (SUGGESTION_FOR_PREDEFINED_PROFILES modunu kullan). Kullanıcı bunlardan birini seçerse veya reddederse ancak o zaman detaylı teknik şartname oluştur.`;
 
     const aiResponse = await this.aiService.generateResponse({
       systemPrompt: PHASE3_SYSTEM_PROMPT(),

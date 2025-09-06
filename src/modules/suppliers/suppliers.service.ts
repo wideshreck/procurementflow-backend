@@ -145,4 +145,16 @@ export class SuppliersService {
   async remove(where: Prisma.SupplierWhereUniqueInput): Promise<Supplier> {
     return this.prisma.supplier.delete({ where });
   }
+
+  async getUserById(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        companyId: true,
+        company: true
+      }
+    });
+  }
 }

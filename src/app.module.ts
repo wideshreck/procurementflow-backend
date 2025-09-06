@@ -23,6 +23,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { FilesModule } from './modules/files/files.module';
 import { CustomRolesModule } from './modules/custom-roles/custom-roles.module';
+import { RFxTemplatesModule } from './modules/rfx-templates/rfx-templates.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { CustomRolesModule } from './modules/custom-roles/custom-roles.module';
     SuppliersModule,
     FilesModule,
     CustomRolesModule,
+    RFxTemplatesModule,
   ],
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },
