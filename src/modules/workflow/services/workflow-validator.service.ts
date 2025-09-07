@@ -1,374 +1,212 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { WorkflowNodeType } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { WorkflowNodeType, EdgeDataType } from '@prisma/client';
+import { CreateWorkflowDto } from '../dto/create-workflow.dto';
+import { Node } from '../dto/node.dto';
+import { WorkflowEdgeDto } from '../dto/workflow-edge.dto';
 
-interface WorkflowNode {
-  id: string;
-  type: string;
-  data?: any;
-  position: { x: number; y: number };
-}
-
-interface WorkflowEdge {
-  id: string;
-  source: string;
-  target: string;
-  sourceHandle?: string;
-  targetHandle?: string;
-  dataType?: string;
-  label?: string;
-}
-
-interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-}
-
-interface NodePortDefinition {
-  inputs: { [key: string]: string };
-  outputs: { [key: string]: string };
-}
+type PortDefinition = { [key: string]: EdgeDataType };
 
 @Injectable()
 export class WorkflowValidatorService {
-  private nodePortDefinitions: Map<string, NodePortDefinition>;
-
-  constructor() {
-    this.nodePortDefinitions = new Map<string, NodePortDefinition>();
-    
-    this.nodePortDefinitions.set('PROCUREMENT_REQUEST', {
-      inputs: {},
-      outputs: {
-        'totalPrice': 'NUMBER',
-        'unitPrice': 'NUMBER',
-        'quantity': 'NUMBER',
-        'category': 'STRING',
-        'urgency': 'STRING',
-        'default': 'ANY',
-      },
-    });
-    
-    this.nodePortDefinitions.set('APPROVE', {
-      inputs: { 'default': 'ANY' },
-      outputs: {},
-    });
-    
-    this.nodePortDefinitions.set('REJECT', {
-      inputs: { 'default': 'ANY' },
-      outputs: {},
-    });
-    
-    this.nodePortDefinitions.set('CONDITION_IF', {
-      inputs: { 'value': 'NUMBER' },
-      outputs: {
-        'yes': 'BOOLEAN',
-        'no': 'BOOLEAN',
-      },
-    });
-    
-    this.nodePortDefinitions.set('CONDITION_SWITCH', {
-      inputs: { 'value': 'STRING' },
-      outputs: {},
-    });
-    
-    this.nodePortDefinitions.set('PARALLEL_FORK', {
-      inputs: { 'default': 'ANY' },
-      outputs: {},
-    });
-    
-    this.nodePortDefinitions.set('PARALLEL_JOIN', {
-      inputs: {},
-      outputs: { 'default': 'BOOLEAN' },
-    });
-    
-    this.nodePortDefinitions.set('PERSON_APPROVAL', {
-      inputs: { 'default': 'ANY' },
-      outputs: {
-        'approved': 'BOOLEAN',
-        'rejected': 'BOOLEAN',
-      },
-    });
-    
-    this.nodePortDefinitions.set('DEPARTMENT_APPROVAL', {
-      inputs: { 'default': 'ANY' },
-      outputs: {
-        'approved': 'BOOLEAN',
-        'rejected': 'BOOLEAN',
-      },
-    });
-    
-    this.nodePortDefinitions.set('EMAIL_NOTIFICATION', {
-      inputs: { 'default': 'ANY' },
-      outputs: { 'default': 'ANY' },
-    });
-    
-    this.nodePortDefinitions.set('FORM', {
-      inputs: { 'default': 'ANY' },
-      outputs: { 'completed': 'BOOLEAN' },
-    });
-  }
-
-  validateWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[]): ValidationResult {
+  public validate(workflowDto: CreateWorkflowDto): void {
     const errors: string[] = [];
-    const warnings: string[] = [];
+    const { nodes, edges } = workflowDto;
 
-    // 1. Check for required nodes
-    const hasProcurementRequest = nodes.some(n => n.type === 'PROCUREMENT_REQUEST');
-    if (!hasProcurementRequest) {
-      errors.push('İş akışı bir "Alım İsteği" node\'u ile başlamalıdır');
+    // Rule 1: Must start with a PROCUREMENT_REQUEST node.
+    const startNodes = nodes.filter(
+      (n) => n.type === WorkflowNodeType.PROCUREMENT_REQUEST,
+    );
+    if (startNodes.length === 0) {
+      errors.push('İş akışı bir "Alım İsteği" node\'u ile başlamalıdır.');
+    }
+    if (startNodes.length > 1) {
+      errors.push('İş akışında birden fazla "Alım İsteği" node\'u olamaz.');
     }
 
-    const hasEndNode = nodes.some(n => n.type === 'APPROVE' || n.type === 'REJECT');
-    if (!hasEndNode) {
-      errors.push('İş akışı "Onayla" veya "Reddet" node\'u ile sonlanmalıdır');
+    // Rule 2: Must end with an APPROVE or REJECT node.
+    const endNodes = nodes.filter(
+      (n) =>
+        n.type === WorkflowNodeType.APPROVE || n.type === WorkflowNodeType.REJECT,
+    );
+    if (endNodes.length === 0) {
+      errors.push('İş akışı "Onayla" veya "Reddet" node\'u ile sonlanmalıdır.');
     }
 
-    // 2. Check for orphaned nodes (except PROCUREMENT_REQUEST)
-    const nodeIds = new Set(nodes.map(n => n.id));
-    const connectedNodes = new Set<string>();
-    
-    edges.forEach(edge => {
-      connectedNodes.add(edge.source);
-      connectedNodes.add(edge.target);
-    });
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+    const edgesBySource = this.groupEdgesBy(edges, 'source');
+    const edgesByTarget = this.groupEdgesBy(edges, 'target');
 
-    nodes.forEach(node => {
-      if (node.type !== 'PROCUREMENT_REQUEST' && !connectedNodes.has(node.id)) {
-        errors.push(`Node "${node.id}" bağlantısı eksik`);
-      }
-    });
+    for (const node of nodes) {
+      const { inputs, outputs } = this.getNodePorts(node, edges);
+      const inputHandles = Object.keys(inputs);
+      const outputHandles = Object.keys(outputs);
 
-    // 3. Validate node connections and data types
-    edges.forEach(edge => {
-      if (!nodeIds.has(edge.source)) {
-        errors.push(`Edge "${edge.id}" geçersiz kaynak node'a sahip: "${edge.source}"`);
-      }
-      if (!nodeIds.has(edge.target)) {
-        errors.push(`Edge "${edge.id}" geçersiz hedef node'a sahip: "${edge.target}"`);
+      const incomingEdges = edgesByTarget.get(node.id) || [];
+      const outgoingEdges = edgesBySource.get(node.id) || [];
+
+      // Rule 3: All nodes except PROCUREMENT_REQUEST must have inputs.
+      if (node.type !== WorkflowNodeType.PROCUREMENT_REQUEST) {
+        if (incomingEdges.length === 0) {
+          errors.push(`"${node.label || node.id}" node'unun girişi boş bırakılamaz.`);
+        }
+        if (incomingEdges.length > inputHandles.length) {
+          errors.push(`"${node.label || node.id}" node'u beklenenden fazla giriş bağlantısına sahip.`);
+        }
       }
 
-      // Type compatibility check
-      const sourceNode = nodes.find(n => n.id === edge.source);
-      const targetNode = nodes.find(n => n.id === edge.target);
-      
-      if (sourceNode && targetNode) {
-        const isCompatible = this.checkTypeCompatibility(
-          sourceNode,
-          targetNode,
-          edge.sourceHandle,
-          edge.targetHandle
-        );
-        
-        if (!isCompatible) {
-          warnings.push(
-            `Veri tipi uyumsuzluğu: "${sourceNode.id}" -> "${targetNode.id}"`
+      // Rule 4: All nodes except APPROVE/REJECT must have outputs.
+      if (
+        node.type !== WorkflowNodeType.APPROVE &&
+        node.type !== WorkflowNodeType.REJECT
+      ) {
+        if (outgoingEdges.length === 0) {
+          errors.push(`"${node.label || node.id}" node'unun çıkışı boş bırakılamaz.`);
+        }
+        if (outgoingEdges.length > outputHandles.length) {
+           errors.push(`"${node.label || node.id}" node'u beklenenden fazla çıkış bağlantısına sahip.`);
+        }
+      }
+
+      // Rule 5: Data type compatibility check.
+      for (const edge of outgoingEdges) {
+        const targetNode = nodeMap.get(edge.target);
+        if (!targetNode) continue;
+
+        const sourcePortType = outputs[edge.sourceHandle || 'default'];
+        const { inputs: targetInputs } = this.getNodePorts(targetNode, edges);
+        const targetPortType = targetInputs[edge.targetHandle || 'default'];
+
+        if (sourcePortType && targetPortType && sourcePortType !== targetPortType) {
+          errors.push(
+            `Tip uyuşmazlığı: "${node.label || node.id}" (${sourcePortType}) -> "${
+              targetNode.label || targetNode.id
+            }" (${targetPortType})`,
           );
         }
       }
-    });
-
-    // 4. Check for cycles
-    if (this.hasCycle(nodes, edges)) {
-      errors.push('İş akışında döngü tespit edildi');
     }
-
-    // 5. Validate parallel structures
-    const parallelForks = nodes.filter(n => n.type === 'PARALLEL_FORK');
-    const parallelJoins = nodes.filter(n => n.type === 'PARALLEL_JOIN');
     
-    if (parallelForks.length !== parallelJoins.length) {
-      warnings.push('Paralel ayırma ve birleştirme node\'ları dengeli değil');
+    // Rule 6: Parallel processing rules
+    this.validateParallelPaths(nodes, edges, errors);
+
+
+    if (errors.length > 0) {
+      throw new Error(errors.join('\n'));
     }
-
-    // 6. Validate node-specific configurations
-    nodes.forEach(node => {
-      const nodeErrors = this.validateNodeConfiguration(node);
-      errors.push(...nodeErrors);
-    });
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-    };
   }
 
-  private validateNodeConfiguration(node: WorkflowNode): string[] {
-    const errors: string[] = [];
+  private getNodePorts(
+    node: Node,
+    edges: WorkflowEdgeDto[],
+  ): {
+    inputs: PortDefinition;
+    outputs: PortDefinition;
+  } {
+    const inputs: PortDefinition = {};
+    const outputs: PortDefinition = {};
 
     switch (node.type) {
-      case 'PERSON_APPROVAL':
-        if (!node.data?.approverId) {
-          errors.push(`"${node.id}" node'unda onaylayıcı seçilmemiş`);
-        }
+      case WorkflowNodeType.PROCUREMENT_REQUEST:
+        outputs['totalPrice'] = EdgeDataType.NUMBER;
+        outputs['unitPrice'] = EdgeDataType.NUMBER;
+        outputs['quantity'] = EdgeDataType.NUMBER;
+        outputs['category'] = EdgeDataType.STRING;
+        outputs['urgency'] = EdgeDataType.STRING;
         break;
-      
-      case 'DEPARTMENT_APPROVAL':
-        if (!node.data?.departmentId) {
-          errors.push(`"${node.id}" node'unda departman seçilmemiş`);
-        }
+      case WorkflowNodeType.APPROVE:
+      case WorkflowNodeType.REJECT:
+        inputs['default'] = EdgeDataType.ANY;
         break;
-      
-      case 'CONDITION_IF':
-        if (!node.data?.operator || node.data?.value === undefined) {
-          errors.push(`"${node.id}" koşul node'u eksik konfigürasyona sahip`);
-        }
+      case WorkflowNodeType.CONDITION_IF:
+        inputs['default'] = EdgeDataType.NUMBER;
+        outputs['yes'] = EdgeDataType.BOOLEAN;
+        outputs['no'] = EdgeDataType.BOOLEAN;
         break;
-      
-      case 'CONDITION_SWITCH':
-        if (!node.data?.cases || node.data.cases.length < 1) {
-          errors.push(`"${node.id}" switch node'unda en az bir durum tanımlanmalı`);
-        }
+      case WorkflowNodeType.CONDITION_SWITCH:
+        inputs['default'] = EdgeDataType.STRING;
+        // The outputs are dynamically generated based on the cases defined in the node's data.
+        node.data.cases.forEach((caseValue) => {
+          // Use a sanitized version of the case value for the handle ID
+          const handleId = caseValue.toLowerCase().replace(/\s+/g, '-');
+          outputs[handleId] = EdgeDataType.BOOLEAN;
+        });
         break;
-      
-      case 'PARALLEL_FORK':
-        if (!node.data?.branchCount || node.data.branchCount < 2) {
-          errors.push(`"${node.id}" paralel ayırma node'unda en az 2 dal olmalı`);
-        }
+      case WorkflowNodeType.PARALLEL_FORK:
+        inputs['default'] = EdgeDataType.ANY;
+        // Outputs are determined by the number of outgoing edges
+        edges
+          .filter((e) => e.source === node.id)
+          .forEach((edge, i) => {
+            outputs[edge.sourceHandle || `branch-${i}`] = EdgeDataType.ANY;
+          });
         break;
-      
-      case 'PARALLEL_JOIN':
-        if (!node.data?.joinStrategy) {
-          errors.push(`"${node.id}" paralel birleştirme node'unda strateji seçilmemiş`);
-        }
+      case WorkflowNodeType.PARALLEL_JOIN:
+        outputs['default'] = EdgeDataType.BOOLEAN;
+        // Inputs are determined by the number of incoming edges
+        edges
+          .filter((e) => e.target === node.id)
+          .forEach((edge, i) => {
+            inputs[edge.targetHandle || `input-${i}`] = EdgeDataType.BOOLEAN;
+          });
         break;
-      
-      case 'EMAIL_NOTIFICATION':
-        if (!node.data?.to || !node.data?.subject) {
-          errors.push(`"${node.id}" e-posta node'unda alıcı veya konu eksik`);
-        }
+      case WorkflowNodeType.PERSON_APPROVAL:
+      case WorkflowNodeType.DEPARTMENT_APPROVAL:
+        inputs['default'] = EdgeDataType.ANY;
+        outputs['approved'] = EdgeDataType.BOOLEAN;
+        outputs['rejected'] = EdgeDataType.BOOLEAN;
         break;
     }
-
-    return errors;
+    return { inputs, outputs };
   }
+  
+  private validateParallelPaths(nodes: Node[], edges: WorkflowEdgeDto[], errors: string[]): void {
+    const forks = nodes.filter(
+      (n): n is Extract<Node, { type: 'PARALLEL_FORK' }> =>
+        n.type === WorkflowNodeType.PARALLEL_FORK,
+    );
+    if (forks.length === 0) return;
 
-  private checkTypeCompatibility(
-    sourceNode: WorkflowNode,
-    targetNode: WorkflowNode,
-    sourceHandle?: string,
-    targetHandle?: string
-  ): boolean {
-    const sourcePorts = this.nodePortDefinitions.get(sourceNode.type);
-    const targetPorts = this.nodePortDefinitions.get(targetNode.type);
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const edgesBySource = this.groupEdgesBy(edges, 'source');
 
-    if (!sourcePorts || !targetPorts) {
-      return true; // Allow unknown types
-    }
+    for (const fork of forks) {
+      const outgoingEdges = edgesBySource.get(fork.id) || [];
+      const approvalNodesOnPaths = new Set<string>();
 
-    const sourceType = sourcePorts.outputs[sourceHandle || 'default'] || 'ANY';
-    const targetType = targetPorts.inputs[targetHandle || 'default'] || 'ANY';
-
-    // ANY type is compatible with everything
-    if (sourceType === 'ANY' || targetType === 'ANY') {
-      return true;
-    }
-
-    return sourceType === targetType;
-  }
-
-  private hasCycle(nodes: WorkflowNode[], edges: WorkflowEdge[]): boolean {
-    const adjacencyList = new Map<string, string[]>();
-    
-    // Build adjacency list
-    nodes.forEach(node => {
-      adjacencyList.set(node.id, []);
-    });
-    
-    edges.forEach(edge => {
-      const neighbors = adjacencyList.get(edge.source) || [];
-      neighbors.push(edge.target);
-      adjacencyList.set(edge.source, neighbors);
-    });
-
-    // DFS to detect cycle
-    const visited = new Set<string>();
-    const recursionStack = new Set<string>();
-
-    const hasCycleDFS = (nodeId: string): boolean => {
-      visited.add(nodeId);
-      recursionStack.add(nodeId);
-
-      const neighbors = adjacencyList.get(nodeId) || [];
-      for (const neighbor of neighbors) {
-        if (!visited.has(neighbor)) {
-          if (hasCycleDFS(neighbor)) {
-            return true;
+      for (const edge of outgoingEdges) {
+        let currentNode = nodeMap.get(edge.target);
+        while (currentNode && currentNode.type !== WorkflowNodeType.PARALLEL_JOIN) {
+          if (currentNode.type === WorkflowNodeType.PERSON_APPROVAL || currentNode.type === WorkflowNodeType.DEPARTMENT_APPROVAL) {
+            approvalNodesOnPaths.add(currentNode.id);
           }
-        } else if (recursionStack.has(neighbor)) {
-          return true;
+          const nextEdge = (edgesBySource.get(currentNode.id) || [])[0];
+          if (!nextEdge) break;
+          currentNode = nodeMap.get(nextEdge.target);
+        }
+        if (!currentNode || currentNode.type !== WorkflowNodeType.PARALLEL_JOIN) {
+          errors.push(`"${fork.label || fork.id}" ile başlayan paralel yol bir PARALLEL_JOIN ile birleştirilmelidir.`);
         }
       }
 
-      recursionStack.delete(nodeId);
-      return false;
-    };
-
-    for (const nodeId of adjacencyList.keys()) {
-      if (!visited.has(nodeId)) {
-        if (hasCycleDFS(nodeId)) {
-          return true;
-        }
+      if (outgoingEdges.length > 1 && approvalNodesOnPaths.size === 0) {
+         // This is a simple split, not a parallel approval, which is allowed.
       }
     }
-
-    return false;
   }
 
-  public getNodeOutputPorts(nodeType: string, nodeData?: any): string[] {
-    switch (nodeType) {
-      case 'PROCUREMENT_REQUEST':
-        return ['totalPrice', 'unitPrice', 'quantity', 'category', 'urgency'];
-      
-      case 'CONDITION_IF':
-        return ['yes', 'no'];
-      
-      case 'CONDITION_SWITCH':
-        return nodeData?.cases?.map((c: any, i: number) => `case-${i}`) || [];
-      
-      case 'PARALLEL_FORK':
-        return Array.from(
-          { length: nodeData?.branchCount || 2 },
-          (_, i) => `branch-${i}`
-        );
-      
-      case 'PERSON_APPROVAL':
-      case 'DEPARTMENT_APPROVAL':
-        return ['approved', 'rejected'];
-      
-      case 'PARALLEL_JOIN':
-      case 'EMAIL_NOTIFICATION':
-      case 'FORM':
-        return ['default'];
-      
-      default:
-        return [];
-    }
-  }
 
-  public getNodeInputPorts(nodeType: string, nodeData?: any): string[] {
-    switch (nodeType) {
-      case 'PROCUREMENT_REQUEST':
-        return []; // No inputs
-      
-      case 'APPROVE':
-      case 'REJECT':
-        return ['default'];
-      
-      case 'CONDITION_IF':
-        return ['value'];
-      
-      case 'CONDITION_SWITCH':
-        return ['value'];
-      
-      case 'PARALLEL_JOIN':
-        return Array.from(
-          { length: nodeData?.inputCount || 2 },
-          (_, i) => `input-${i}`
-        );
-      
-      default:
-        return ['default'];
+  private groupEdgesBy(
+    edges: WorkflowEdgeDto[],
+    key: 'source' | 'target',
+  ): Map<string, WorkflowEdgeDto[]> {
+    const map = new Map<string, WorkflowEdgeDto[]>();
+    for (const edge of edges) {
+      const id = edge[key];
+      if (!map.has(id)) {
+        map.set(id, []);
+      }
+      map.get(id)!.push(edge);
     }
+    return map;
   }
 }

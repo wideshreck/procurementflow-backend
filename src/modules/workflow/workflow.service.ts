@@ -15,20 +15,12 @@ export class WorkflowService {
   ) {}
 
   async create(createWorkflowDto: CreateWorkflowDto, companyId: string, userId: string) {
+    // 1. Validate the entire workflow structure and data
+    this.validator.validate(createWorkflowDto);
+
     const { nodes, edges, ...rest } = createWorkflowDto;
-    
-    // Validate workflow
-    const validationResult = this.validator.validateWorkflow(nodes, edges);
-    
-    if (!validationResult.isValid) {
-      throw new BadRequestException({
-        message: 'İş akışı doğrulama hatası',
-        errors: validationResult.errors,
-        warnings: validationResult.warnings,
-      });
-    }
-    
-    // Create workflow with related nodes and edges
+
+    // 2. Create workflow with related nodes and edges
     const workflow = await this.prisma.workflow.create({
       data: {
         ...rest,
@@ -36,23 +28,23 @@ export class WorkflowService {
         createdBy: userId,
         version: 1,
         nodes: {
-          create: nodes.map(node => ({
+          create: nodes.map((node) => ({
             nodeId: node.id,
-            type: this.mapNodeType(node.type),
-            label: node.data?.label || node.type,
+            type: node.type as WorkflowNodeType, // Type is already validated by DTO
+            label: node.label || node.type,
             position: node.position,
             data: node.data || {},
           })),
         },
         edges: {
-          create: edges.map(edge => ({
+          create: edges.map((edge) => ({
             edgeId: edge.id,
             sourceId: edge.source,
             targetId: edge.target,
             sourceHandle: edge.sourceHandle,
             targetHandle: edge.targetHandle,
-            label: (edge as any).label,
-            dataType: (edge as any).dataType || 'ANY',
+            label: edge.label,
+            dataType: edge.dataType,
           })),
         },
       },
@@ -132,36 +124,32 @@ export class WorkflowService {
   }
 
   async update(id: string, updateWorkflowDto: UpdateWorkflowDto) {
-    const workflow = await this.prisma.workflow.findUnique({
+    const existingWorkflow = await this.prisma.workflow.findUnique({
       where: { id },
+      include: { nodes: true, edges: true },
     });
 
-    if (!workflow) {
+    if (!existingWorkflow) {
       throw new NotFoundException('İş akışı bulunamadı');
     }
 
     const { nodes, edges, ...rest } = updateWorkflowDto;
 
-    // If nodes and edges are provided, validate them
+    // If nodes and edges are part of the update, validate the new structure
     if (nodes && edges) {
-      const validationResult = this.validator.validateWorkflow(nodes, edges);
-      
-      if (!validationResult.isValid) {
-        throw new BadRequestException({
-          message: 'İş akışı doğrulama hatası',
-          errors: validationResult.errors,
-          warnings: validationResult.warnings,
-        });
-      }
-
-      // Delete existing nodes and edges
-      await this.prisma.workflowNode.deleteMany({
-        where: { workflowId: id },
+      this.validator.validate({
+        // Construct a DTO-like object for validation
+        name: rest.name || existingWorkflow.name,
+        description: rest.description || existingWorkflow.description,
+        departmentId: rest.departmentId || existingWorkflow.departmentId || undefined,
+        isActive: rest.isActive !== undefined ? rest.isActive : existingWorkflow.isActive,
+        nodes,
+        edges,
       });
 
-      await this.prisma.workflowEdge.deleteMany({
-        where: { workflowId: id },
-      });
+      // Delete existing nodes and edges to replace them
+      await this.prisma.workflowEdge.deleteMany({ where: { workflowId: id } });
+      await this.prisma.workflowNode.deleteMany({ where: { workflowId: id } });
     }
 
     // Update workflow
@@ -170,27 +158,30 @@ export class WorkflowService {
       data: {
         ...rest,
         version: { increment: 1 },
-        nodes: nodes ? {
-          create: nodes.map(node => ({
-            nodeId: node.id,
-            type: this.mapNodeType(node.type),
-            label: node.data?.label || node.type,
-            position: node.position,
-            data: node.data || {},
-          })),
-        } : undefined,
-        edges: edges ? {
-          deleteMany: {},
-          create: edges.map(edge => ({
-            edgeId: edge.id,
-            sourceId: edge.source,
-            targetId: edge.target,
-            sourceHandle: edge.sourceHandle,
-            targetHandle: edge.targetHandle,
-            label: (edge as any).label,
-            dataType: (edge as any).dataType || 'ANY',
-          })),
-        } : undefined,
+        nodes: nodes
+          ? {
+              create: nodes.map((node) => ({
+                nodeId: node.id,
+                type: node.type as WorkflowNodeType,
+                label: node.label || node.type,
+                position: node.position,
+                data: node.data || {},
+              })),
+            }
+          : undefined,
+        edges: edges
+          ? {
+              create: edges.map((edge) => ({
+                edgeId: edge.id,
+                sourceId: edge.source,
+                targetId: edge.target,
+                sourceHandle: edge.sourceHandle,
+                targetHandle: edge.targetHandle,
+                label: edge.label,
+                dataType: edge.dataType,
+              })),
+            }
+          : undefined,
       },
       include: {
         nodes: true,
@@ -461,47 +452,4 @@ export class WorkflowService {
     };
   }
 
-  private mapNodeType(type: string): WorkflowNodeType {
-    const typeMap: Record<string, WorkflowNodeType> = {
-      'procurement-request': WorkflowNodeType.PROCUREMENT_REQUEST,
-      'purchaseRequest': WorkflowNodeType.PROCUREMENT_REQUEST,
-      'PROCUREMENT_REQUEST': WorkflowNodeType.PROCUREMENT_REQUEST,
-      'purchaseRequestApprove': WorkflowNodeType.APPROVE,
-      'APPROVE': WorkflowNodeType.APPROVE,
-      'purchaseRequestReject': WorkflowNodeType.REJECT,
-      'REJECT': WorkflowNodeType.REJECT,
-      'condition-if-else': WorkflowNodeType.CONDITION_IF,
-      'condition': WorkflowNodeType.CONDITION_IF,
-      'CONDITION_IF': WorkflowNodeType.CONDITION_IF,
-      'condition-case': WorkflowNodeType.CONDITION_SWITCH,
-      'CONDITION_SWITCH': WorkflowNodeType.CONDITION_SWITCH,
-      'parallel-fork': WorkflowNodeType.PARALLEL_FORK,
-      'PARALLEL_FORK': WorkflowNodeType.PARALLEL_FORK,
-      'parallel-join': WorkflowNodeType.PARALLEL_JOIN,
-      'PARALLEL_JOIN': WorkflowNodeType.PARALLEL_JOIN,
-      'personApproval': WorkflowNodeType.PERSON_APPROVAL,
-      'PERSON_APPROVAL': WorkflowNodeType.PERSON_APPROVAL,
-      'departmentApproval': WorkflowNodeType.DEPARTMENT_APPROVAL,
-      'DEPARTMENT_APPROVAL': WorkflowNodeType.DEPARTMENT_APPROVAL,
-      'email': WorkflowNodeType.EMAIL_NOTIFICATION,
-      'EMAIL_NOTIFICATION': WorkflowNodeType.EMAIL_NOTIFICATION,
-      'form': WorkflowNodeType.FORM,
-      'FORM': WorkflowNodeType.FORM,
-    };
-
-    const mappedType = typeMap[type];
-    if (!mappedType) {
-      throw new BadRequestException(`Desteklenmeyen node tipi: ${type}`);
-    }
-
-    return mappedType;
-  }
-
-  getNodeOutputPorts(node: any): string[] {
-    return this.validator.getNodeOutputPorts(node.type, node.data);
-  }
-
-  getNodeInputPorts(node: any): string[] {
-    return this.validator.getNodeInputPorts(node.type, node.data);
-  }
 }

@@ -1,7 +1,7 @@
 // Auth System Constants
 export const AUTH_CONSTANTS = {
   // Token expiration times
-  ACCESS_TOKEN_EXPIRES_IN: '15m',
+  ACCESS_TOKEN_EXPIRES_IN: '8h',
   REFRESH_TOKEN_EXPIRES_IN: '7d',
   EMAIL_VERIFICATION_TOKEN_EXPIRES_IN: '24h',
   PASSWORD_RESET_TOKEN_EXPIRES_IN: '1h',
@@ -21,7 +21,7 @@ export const AUTH_CONSTANTS = {
   RATE_LIMIT_MAX: 10, // max requests per TTL
   
   // Session
-  SESSION_IDLE_TIMEOUT: 30 * 60 * 1000, // 30 minutes
+  SESSION_IDLE_TIMEOUT: 8 * 60 * 60 * 1000, // 8 hours
   MAX_SESSIONS_PER_USER: 5,
   
   // Password rules
