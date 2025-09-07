@@ -71,6 +71,9 @@ async function main() {
     'custom-roles:list',
     'users:list',
     'users:read',
+    'users:create',
+    'users:update',
+    'users:delete',
     'users:update-role',
     'categories:create',
     'categories:update',
@@ -78,12 +81,14 @@ async function main() {
     'cost-centers:create',
     'cost-centers:update',
     'cost-centers:delete',
+    'departments:read',
     'departments:create',
     'departments:update',
     'departments:delete',
     'locations:create',
     'locations:update',
     'locations:delete',
+    'locations:read',
   ];
 
   let adminRole = await prisma.customRole.findFirst({

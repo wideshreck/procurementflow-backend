@@ -28,6 +28,7 @@ async function seedDepartments() {
           companyId,
           managerId,
           locationId,
+          createdById: managerId, // Assuming the manager is the creator
         },
       });
       console.log(`Created department: ${dept.name}`);

@@ -28,6 +28,7 @@ export class TokenService {
 
     const csrfToken = this.crypto.generateSecureToken(16); // 16 bytes for CSRF token
 
+    const jti = this.crypto.generateSecureToken(16);
     const [accessToken, refreshToken] = await Promise.all([
       this.generateAccessToken({ sub: userId, email, permissions, sessionId }),
       this.generateRefreshToken({
@@ -35,6 +36,7 @@ export class TokenService {
         email,
         family: tokenFamily,
         sessionId,
+        jti,
         type: 'refresh',
       }),
     ]);
@@ -141,6 +143,7 @@ export class TokenService {
     // Generate new tokens with same family
     const csrfToken = this.crypto.generateSecureToken(16);
     const permissions = storedToken.user.customRole?.permissions as string[] || [];
+    const jti = this.crypto.generateSecureToken(16);
     const [accessToken, refreshToken] = await Promise.all([
       this.generateAccessToken({
         sub: storedToken.userId,
@@ -153,6 +156,7 @@ export class TokenService {
         email: storedToken.user.email,
         family: storedToken.family,
         sessionId: payload.sessionId,
+        jti,
         type: 'refresh',
       }),
     ]);

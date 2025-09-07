@@ -488,4 +488,8 @@ export class AuthService {
     if (userAgent.includes('Tablet')) return 'Tablet';
     return 'Desktop';
   }
+
+  async hashPassword(password: string): Promise<string> {
+    return this.crypto.hashPassword(password);
+  }
 }

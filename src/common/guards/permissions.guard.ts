@@ -1,30 +1,45 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { PrismaService } from '../../prisma/prisma.service';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    private prisma: PrismaService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
+      PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
-    if (!requiredPermissions) {
+    if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
     }
 
     const { user } = context.switchToHttp().getRequest();
-    if (!user || !user.permissions) {
-      throw new ForbiddenException('Insufficient permissions');
+    if (!user || !user.id) {
+      throw new ForbiddenException('User not found');
     }
 
-    const hasPermission = () =>
-      requiredPermissions.every((permission) => user.permissions.includes(permission));
+    const dbUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { customRole: true },
+    });
 
-    if (!hasPermission()) {
+    if (!dbUser || !dbUser.customRole) {
+      throw new ForbiddenException('User role not found');
+    }
+
+    const userPermissions = dbUser.customRole.permissions as string[];
+    const hasAllPermissions = requiredPermissions.every(permission =>
+      userPermissions.includes(permission),
+    );
+
+    if (!hasAllPermissions) {
       throw new ForbiddenException('Insufficient permissions');
     }
 

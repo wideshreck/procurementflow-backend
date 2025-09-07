@@ -1,8 +1,10 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Patch,
+  Delete,
   Body,
   UseGuards,
   Query,
@@ -21,9 +23,12 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
+import { AuthService } from '../auth/auth.service';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserCustomRoleDto } from './dto/role.dto';
 
 @ApiTags('users')
@@ -31,7 +36,20 @@ import { UpdateUserCustomRoleDto } from './dto/role.dto';
 @Controller('users')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class UsersController {
-  constructor(private readonly users: UsersService) {}
+  constructor(
+    private readonly users: UsersService,
+    private readonly authService: AuthService,
+  ) {}
+
+  @Post()
+  @Permissions('users:create')
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async create(@Body() createUserDto: CreateUserDto) {
+    const passwordHash = await this.authService.hashPassword(createUserDto.password);
+    return this.users.createUser({ ...createUserDto, passwordHash });
+  }
 
   @Get()
   @Permissions('users:list')
@@ -77,11 +95,22 @@ export class UsersController {
   async list(
     @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip: number,
     @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
+    @Query('searchTerm') searchTerm?: string,
+    @Query('role') role?: string,
+    @Query('status') status?: string,
+    @Query('department') department?: string,
   ) {
     // normalize: negatif/çok büyük değerleri sınırlayalım
     const _skip = Math.max(0, skip);
     const _take = Math.min(Math.max(1, take), 100);
-    return this.users.list({ skip: _skip, take: _take });
+    return this.users.list({
+      skip: _skip,
+      take: _take,
+      searchTerm,
+      role,
+      status,
+      department,
+    });
   }
 
   @Get(':id')
@@ -100,6 +129,27 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async getOne(@Param('id') id: string) {
     return this.users.getPublicUserById(id);
+  }
+
+  @Patch(':id')
+  @Permissions('users:update')
+  @ApiOperation({ summary: 'Update a user' })
+  @ApiResponse({ status: 200, description: 'User updated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.users.updateUser(id, updateUserDto);
+  }
+
+  @Delete(':id')
+  @Permissions('users:delete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a user' })
+  @ApiResponse({ status: 204, description: 'User deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async delete(@Param('id') id: string) {
+    return this.users.deleteUser(id);
   }
 
   @Patch(':id/custom-role')

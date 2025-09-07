@@ -17,6 +17,7 @@ export interface RefreshTokenPayload {
   email: string;
   family: string;
   sessionId: string;
+  jti: string; // JWT ID to ensure token uniqueness
   type: 'refresh';
 }
 

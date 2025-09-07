@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsOptional, IsJSON } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsArray, IsIn } from 'class-validator';
+import { ALL_PERMISSIONS } from '../../../common/permissions';
 
 export class CreateCustomRoleDto {
   @IsString()
@@ -13,9 +14,11 @@ export class CreateCustomRoleDto {
   @IsOptional()
   color?: string;
 
-  @IsJSON()
+  @IsArray()
+  @IsString({ each: true })
+  @IsIn(ALL_PERMISSIONS, { each: true })
   @IsNotEmpty()
-  permissions: string;
+  permissions: string[];
 
   @IsString()
   @IsNotEmpty()

@@ -23,6 +23,8 @@ model User {
   lastLoginAt             DateTime?
   lastLoginIp             String?
   companyId               String
+  locationId              String?
+  location                Location?                @relation(fields: [locationId], references: [id])
   auditLogs               AuditLog[]
   conversations           Conversation[]
   ownedBudgets            CostCenter[]             @relation("BudgetOwner")
@@ -34,6 +36,8 @@ model User {
   refreshTokens           RefreshToken[]
   sessions                Session[]
   company                 Company                  @relation("UserCompany", fields: [companyId], references: [id])
+  createdDepartments      Department[]             @relation("CreatedDepartments")
+  updatedDepartments      Department[]             @relation("UpdatedDepartments")
   supplierDocuments       SupplierDocument[]
   supplierMeetingNotes    SupplierMeetingNote[]
   twoFactorAuth           TwoFactorAuth?
@@ -42,6 +46,7 @@ model User {
 
   @@index([email])
   @@index([companyId])
+  @@index([locationId])
 }
 
 model Conversation {
@@ -264,6 +269,7 @@ model Location {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   departments Department[]
+  users       User[]
   company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   contact     User         @relation("LocationContact", fields: [contactId], references: [id])
 
@@ -272,6 +278,7 @@ model Location {
 }
 
 model Department {
+<<<<<<< HEAD
   id          String       @id @default(cuid())
   name        String
   description String?
@@ -288,11 +295,34 @@ model Department {
   manager     User         @relation("DepartmentManager", fields: [managerId], references: [id])
   parent      Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children    Department[] @relation("DepartmentHierarchy")
+=======
+  id            String       @id @default(cuid())
+  name          String
+  description   String?
+  parentId      String?
+  managerId     String?
+  locationId    String
+  companyId     String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  createdById   String
+  updatedById   String?
+  costCenters   CostCenter[]
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  location      Location     @relation(fields: [locationId], references: [id])
+  manager       User?        @relation("DepartmentManager", fields: [managerId], references: [id])
+  parent        Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children      Department[] @relation("DepartmentHierarchy")
+  createdBy     User         @relation("CreatedDepartments", fields: [createdById], references: [id])
+  updatedBy     User?        @relation("UpdatedDepartments", fields: [updatedById], references: [id])
+>>>>>>> 2c1ff11 (new pages)
 
   @@index([companyId])
   @@index([parentId])
   @@index([managerId])
   @@index([locationId])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model CostCenter {

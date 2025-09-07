@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto, UpdateDepartmentDto, DepartmentResponseDto } from './dto/department.dto';
@@ -41,8 +42,12 @@ export class DepartmentsController {
   @Get()
   @ApiOperation({ summary: 'Tüm departmanları listele (hiyerarşik)' })
   @ApiResponse({ status: 200, description: 'Departman listesi', type: [DepartmentResponseDto] })
-  findAll(@Request() req): Promise<DepartmentResponseDto[]> {
-    return this.departmentsService.findAll(req.user.id);
+  findAll(
+    @Request() req,
+    @Query('searchTerm') searchTerm?: string,
+    @Query('location') location?: string,
+  ): Promise<DepartmentResponseDto[]> {
+    return this.departmentsService.findAll(req.user.id, { searchTerm, location });
   }
 
   @Get(':id')

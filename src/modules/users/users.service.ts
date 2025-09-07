@@ -118,10 +118,39 @@ export class UsersService {
     });
   }
 
-  list(options?: { skip?: number; take?: number }) {
+  list(options?: {
+    skip?: number;
+    take?: number;
+    searchTerm?: string;
+    role?: string;
+    status?: string;
+    department?: string;
+  }) {
+    const where: any = {};
+
+    if (options?.searchTerm) {
+      where.OR = [
+        { fullName: { contains: options.searchTerm, mode: 'insensitive' } },
+        { email: { contains: options.searchTerm, mode: 'insensitive' } },
+      ];
+    }
+
+    if (options?.role) {
+      where.customRole = { name: options.role };
+    }
+
+    if (options?.status) {
+      where.isActive = options.status === 'active';
+    }
+
+    if (options?.department) {
+      where.department = { name: options.department };
+    }
+
     return this.prisma.user.findMany({
       skip: options?.skip,
       take: options?.take,
+      where,
       select: publicUserSelect,
       orderBy: { createdAt: 'desc' },
     });
@@ -133,5 +162,39 @@ export class UsersService {
       select: publicUserSelect,
       orderBy: { fullName: 'asc' },
     });
+  }
+
+  async updateUser(id: string, data: {
+    email?: string;
+    fullName?: string;
+    phone?: string;
+    department?: string;
+    isActive?: boolean;
+    customRoleId?: string;
+  }) {
+    const userExists = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!userExists) throw new NotFoundException('User not found');
+
+    return this.prisma.user.update({
+      where: { id },
+      data,
+      select: publicUserSelect,
+    });
+  }
+
+  async deleteUser(id: string) {
+    const userExists = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!userExists) throw new NotFoundException('User not found');
+
+    await this.prisma.user.delete({
+      where: { id },
+    });
+    return { message: 'User deleted successfully' };
   }
 }

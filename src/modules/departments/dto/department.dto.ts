@@ -1,58 +1,58 @@
-import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateDepartmentDto {
-  @ApiProperty({ description: 'Departman adı' })
+  @ApiProperty({
+    description: 'Departmanın adı',
+    maxLength: 255,
+    example: 'İnsan Kaynakları',
+  })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(255)
   name: string;
 
-  @ApiPropertyOptional({ description: 'Departman açıklaması' })
-  @IsString()
-  @IsOptional()
-  description?: string;
-
-  @ApiPropertyOptional({ description: 'Üst departman ID\'si (varsa)', type: String, nullable: true })
+  @ApiProperty({
+    description: 'Departmanın bulunduğu lokasyonun IDsi',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+  })
   @IsUUID()
-  @IsOptional()
-  parentId?: string | null;
-
-  @ApiProperty({ description: 'Departman yöneticisi ID\'si' })
-  @IsUUID()
-  @IsNotEmpty()
-  managerId: string;
-
-  @ApiProperty({ description: 'Departmanın bulunduğu lokasyon ID\'si' })
-  @IsUUID()
-  @IsNotEmpty()
   locationId: string;
+
+  @ApiPropertyOptional({
+    description: 'Varsa üst departmanın IDsi',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentId?: string;
 }
 
 export class UpdateDepartmentDto {
-  @ApiPropertyOptional({ description: 'Departman adı' })
-  @IsString()
+  @ApiPropertyOptional({
+    description: 'Departmanın yeni adı',
+    maxLength: 255,
+    example: 'İnsan Kaynakları ve Eğitim',
+  })
   @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Departman açıklaması' })
-  @IsString()
+  @ApiPropertyOptional({
+    description: 'Varsa yeni üst departmanın IDsi',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+  })
   @IsOptional()
-  description?: string;
-
-  @ApiPropertyOptional({ description: 'Üst departman ID\'si' })
   @IsUUID()
-  @IsOptional()
-  parentId?: string;
-
-  @ApiPropertyOptional({ description: 'Departman yöneticisi ID\'si' })
-  @IsUUID()
-  @IsOptional()
-  managerId?: string;
-
-  @ApiPropertyOptional({ description: 'Lokasyon ID\'si' })
-  @IsUUID()
-  @IsOptional()
-  locationId?: string;
+  parentId?: string | null;
 }
 
 export class DepartmentResponseDto {
@@ -62,51 +62,14 @@ export class DepartmentResponseDto {
   @ApiProperty()
   name: string;
 
-  @ApiPropertyOptional({ type: String, nullable: true })
-  description?: string | null;
-
-  @ApiPropertyOptional({ type: String, nullable: true })
-  parentId?: string | null;
-
-  @ApiPropertyOptional({ nullable: true })
-  parent?: {
-    id: string;
-    name: string;
-  } | null;
-
-  @ApiProperty()
-  managerId: string;
-
-  @ApiProperty()
-  manager: {
-    id: string;
-    fullName: string;
-    email: string;
-  };
-
   @ApiProperty()
   locationId: string;
 
-  @ApiProperty()
-  location: {
-    id: string;
-    name: string;
-    address: string;
-  };
-
-  @ApiProperty()
-  companyId: string;
-
-  @ApiPropertyOptional({ type: () => [DepartmentResponseDto] })
-  children?: DepartmentResponseDto[];
-
   @ApiPropertyOptional()
-  costCenters?: {
-    id: string;
-    name: string;
-    budget: number | any; // Decimal'i number'a çevirdiğimiz için any olabilir
-    remainingBudget: number | any;
-  }[];
+  parentId?: string | null;
+
+  @ApiProperty({ type: () => [DepartmentResponseDto] })
+  children: DepartmentResponseDto[];
 
   @ApiProperty()
   createdAt: Date;

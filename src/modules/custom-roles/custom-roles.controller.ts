@@ -2,10 +2,16 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestj
 import { CustomRolesService } from './custom-roles.service';
 import { CreateCustomRoleDto } from './dto/create-custom-role.dto';
 import { UpdateCustomRoleDto } from './dto/update-custom-role.dto';
+import { PERMISSIONS_CONFIG } from '../../common/permissions';
 
 @Controller('custom-roles')
 export class CustomRolesController {
   constructor(private readonly customRolesService: CustomRolesService) {}
+
+  @Get('permissions')
+  getPermissions() {
+    return PERMISSIONS_CONFIG;
+  }
 
   @Post()
   create(@Body() createCustomRoleDto: CreateCustomRoleDto) {
