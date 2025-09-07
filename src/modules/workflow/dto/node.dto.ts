@@ -20,7 +20,7 @@ export const NodeSchema = z.object({
     x: z.number(),
     y: z.number(),
   }),
-  data: z.any(),
+  data: z.any().optional(),
 });
 
 export class NodeDto extends createZodDto(NodeSchema) {}

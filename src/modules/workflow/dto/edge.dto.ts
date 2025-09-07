@@ -7,6 +7,8 @@ export const EdgeSchema = z.object({
   sourceHandle: z.string().optional(),
   target: z.string(),
   targetHandle: z.string().optional(),
+  label: z.string().optional(),
+  dataType: z.string().optional(),
 });
 
 export class EdgeDto extends createZodDto(EdgeSchema) {}
