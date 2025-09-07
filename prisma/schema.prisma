@@ -37,7 +37,8 @@ model User {
   supplierDocuments       SupplierDocument[]
   supplierMeetingNotes    SupplierMeetingNote[]
   twoFactorAuth           TwoFactorAuth?
-  company                 Company                  @relation("UserCompany", fields: [companyId], references: [id])
+  createdWorkflows        Workflow[]               @relation("WorkflowCreator")
+  workflowApprovals       WorkflowApproval[]       @relation("WorkflowApprover")
 
   @@index([email])
   @@index([companyId])
@@ -152,6 +153,16 @@ model AuditLog {
   @@index([resource, resourceId])
 }
 
+model TwoFactorAuth {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  secret    String
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model Product {
   id          String        @id @default(cuid())
   name        String
@@ -212,7 +223,6 @@ model Company {
   suppliers   Supplier[]
   users       User[]       @relation("UserCompany")
   workflows   Workflow[]
-  suppliers   Supplier[]
   customRoles CustomRole[]
 
   @@index([name])
@@ -272,6 +282,7 @@ model Department {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   costCenters CostCenter[]
+  workflows   Workflow[]   // Workflows associated with this department
   company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   location    Location     @relation(fields: [locationId], references: [id])
   manager     User         @relation("DepartmentManager", fields: [managerId], references: [id])
@@ -352,18 +363,27 @@ model DeliveryDetail {
 }
 
 model Workflow {
-  id          String             @id @default(cuid())
-  name        String
-  description String?
-  edges       Json
-  companyId   String
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  nodes       Json
-  company     Company            @relation(fields: [companyId], references: [id])
-  instances   WorkflowInstance[]
+  id           String             @id @default(cuid())
+  name         String
+  description  String?
+  companyId    String
+  departmentId String?            // Optional: Associate workflow with specific department
+  isActive     Boolean            @default(true)
+  version      Int                @default(1)
+  createdBy    String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  instances    WorkflowInstance[]
+  executions   WorkflowExecution[]
+  nodes        WorkflowNode[]
+  edges        WorkflowEdge[]
+  company      Company            @relation(fields: [companyId], references: [id])
+  department   Department?        @relation(fields: [departmentId], references: [id])
+  creator      User              @relation("WorkflowCreator", fields: [createdBy], references: [id])
 
   @@index([companyId])
+  @@index([departmentId])
+  @@index([isActive])
 }
 
 model WorkflowInstance {
@@ -371,15 +391,97 @@ model WorkflowInstance {
   procurementRequestId String             @unique
   workflowId           String
   status               WorkflowStatus     @default(IN_PROGRESS)
+  currentNodeId        String?            // Currently executing node
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
-  currentState         Json?
-  history              Json[]
+  completedAt          DateTime?
+  currentState         Json?              // Stores current execution state
+  history              Json[]             // Execution history
+  approvals            WorkflowApproval[]
   procurementRequest   ProcurementRequest @relation(fields: [procurementRequestId], references: [id])
   workflow             Workflow           @relation(fields: [workflowId], references: [id])
 
   @@index([workflowId])
   @@index([procurementRequestId])
+  @@index([status])
+}
+
+model WorkflowNode {
+  id          String                @id @default(cuid())
+  workflowId  String
+  nodeId      String                // Internal node identifier in the flow
+  type        WorkflowNodeType
+  label       String
+  position    Json                  // {x: number, y: number}
+  data        Json                  // Node-specific configuration
+  workflow    Workflow              @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sourceEdges WorkflowEdge[]        @relation("SourceNode")
+  targetEdges WorkflowEdge[]        @relation("TargetNode")
+  executions  WorkflowExecution[]
+  approvals   WorkflowApproval[]
+
+  @@unique([workflowId, nodeId])
+  @@index([workflowId])
+  @@index([type])
+}
+
+model WorkflowEdge {
+  id           String       @id @default(cuid())
+  workflowId   String
+  edgeId       String       // Internal edge identifier
+  sourceId     String
+  targetId     String
+  sourceHandle String?      // Output port identifier
+  targetHandle String?      // Input port identifier
+  label        String?
+  dataType     EdgeDataType @default(ANY)
+  workflow     Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sourceNode   WorkflowNode @relation("SourceNode", fields: [workflowId, sourceId], references: [workflowId, nodeId])
+  targetNode   WorkflowNode @relation("TargetNode", fields: [workflowId, targetId], references: [workflowId, nodeId])
+
+  @@unique([workflowId, edgeId])
+  @@index([workflowId])
+  @@index([sourceId])
+  @@index([targetId])
+}
+
+model WorkflowExecution {
+  id               String           @id @default(cuid())
+  workflowId       String
+  nodeId           String
+  instanceId       String
+  status           ExecutionStatus  @default(PENDING)
+  startedAt        DateTime         @default(now())
+  completedAt      DateTime?
+  output           Json?            // Node execution output
+  error            String?          // Error message if failed
+  workflow         Workflow         @relation(fields: [workflowId], references: [id])
+  node             WorkflowNode     @relation(fields: [workflowId, nodeId], references: [workflowId, nodeId])
+
+  @@index([instanceId])
+  @@index([workflowId, nodeId])
+  @@index([status])
+}
+
+model WorkflowApproval {
+  id               String                 @id @default(cuid())
+  instanceId       String
+  nodeId           String
+  workflowId       String
+  approverId       String
+  status           ApprovalStatus         @default(PENDING)
+  decision         ApprovalDecision?
+  comments         String?
+  requestedAt      DateTime               @default(now())
+  respondedAt      DateTime?
+  instance         WorkflowInstance       @relation(fields: [instanceId], references: [id])
+  node             WorkflowNode           @relation(fields: [workflowId, nodeId], references: [workflowId, nodeId])
+  approver         User                   @relation("WorkflowApprover", fields: [approverId], references: [id])
+
+  @@index([instanceId])
+  @@index([approverId])
+  @@index([status])
+  @@index([workflowId, nodeId])
 }
 
 
@@ -465,6 +567,56 @@ enum WorkflowStatus {
   COMPLETED
   REJECTED
   CANCELLED
+  PAUSED
+}
+
+enum WorkflowNodeType {
+  // Start and End nodes
+  PROCUREMENT_REQUEST
+  APPROVE
+  REJECT
+  
+  // Control flow nodes
+  CONDITION_IF
+  CONDITION_SWITCH
+  PARALLEL_FORK
+  PARALLEL_JOIN
+  
+  // Approval nodes
+  PERSON_APPROVAL
+  DEPARTMENT_APPROVAL
+  
+  // Action nodes
+  EMAIL_NOTIFICATION
+  FORM
+}
+
+enum EdgeDataType {
+  NUMBER
+  STRING
+  BOOLEAN
+  ANY
+}
+
+enum ExecutionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum ApprovalDecision {
+  APPROVE
+  REJECT
 }
 
 // --- TEDARIKÇI YÖNETIM SAYFASI VERI MIMARISI ---
@@ -493,7 +645,6 @@ model Supplier {
   purchaseOrders      PurchaseOrder[]
   company             Company               @relation(fields: [companyId], references: [id])
   categories          SupplierCategory[]
-  company             Company               @relation(fields: [companyId], references: [id])
   contacts            SupplierContact[]
   customFields        SupplierCustomField[]
   documents           SupplierDocument[]
@@ -576,7 +727,6 @@ model SupplierProduct {
   unit               String
   supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   purchaseOrderItems PurchaseOrderItem[]
-  supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   @@index([supplierId])
 }
@@ -623,90 +773,6 @@ model PurchaseOrderItem {
 enum Role {
   USER
   ADMIN
-}
-
-enum ProcurementPhase {
-  IDENTIFICATION
-  SUGGESTIONS
-  SPECS
-  SUPPLIER_PRODUCT_SUGGESTIONS
-  FINAL
-  PHASE_ONE_DONE
-  PHASE_TWO_DONE
-  PHASE_THREE_DONE
-}
-
-enum MessageRole {
-  USER
-  ASSISTANT
-  SYSTEM
-}
-
-enum ConversationStatus {
-  ACTIVE
-  COMPLETED
-  CANCELLED
-}
-
-enum ProductStatus {
-  ACTIVE
-  INACTIVE
-  DRAFT
-}
-
-enum ServiceStatus {
-  ACTIVE
-  INACTIVE
-  DRAFT
-}
-
-enum CategoryColor {
-  RED
-  ORANGE
-  AMBER
-  YELLOW
-  LIME
-  GREEN
-  EMERALD
-  TEAL
-  CYAN
-  SKY
-  BLUE
-  INDIGO
-  VIOLET
-  PURPLE
-  FUCHSIA
-  PINK
-  ROSE
-  SLATE
-  GRAY
-  ZINC
-  NEUTRAL
-  STONE
-}
-
-enum RequestStatus {
-  DRAFT
-  PENDING_APPROVAL
-  APPROVED
-  REJECTED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum Urgency {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-enum WorkflowStatus {
-  IN_PROGRESS
-  COMPLETED
-  REJECTED
-  CANCELLED
 }
 
 enum SupplierType {
