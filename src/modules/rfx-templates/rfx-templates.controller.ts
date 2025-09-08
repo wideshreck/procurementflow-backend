@@ -164,6 +164,19 @@ export class RFxTemplatesController {
     );
   }
 
+  // ==================== Supplier Endpoints ====================
+
+  @Get('suppliers/by-category/:categoryId')
+  async getSuppliersByCategory(
+    @Request() req,
+    @Param('categoryId') categoryId: string,
+  ) {
+    return this.rfxTemplatesService.getSuppliersByCategory(
+      req.user.companyId,
+      categoryId,
+    );
+  }
+
   // ==================== Analytics Endpoints ====================
 
   @Get('analytics/summary')

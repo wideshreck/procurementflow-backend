@@ -45,22 +45,38 @@ export class RFxTemplatesService {
       });
     }
 
+    // Generate default template sections with fields
+    const defaultSections = this.generateDefaultTemplateSections();
+
+    // Process sections to ensure all fields have system names
+    const processSection = (section: any) => {
+      if (!section || !section.fields) return section;
+      
+      return {
+        ...section,
+        fields: section.fields.map((field: any) => ({
+          ...field,
+          name: field.name || this.generateSystemName(field.label),
+        })),
+      };
+    };
+
     return this.prisma.rFxTemplate.create({
       data: {
         companyId,
         name: createDto.name,
         description: createDto.description,
         type: createDto.type,
+        categoryId: createDto.categoryId,
         isDefault: createDto.isDefault || false,
         isActive: createDto.isActive ?? true,
-        introductionSection: createDto.introductionSection as any || null,
-        scopeSection: createDto.scopeSection as any || null,
-        qualityStandards: createDto.qualityStandards as any || null,
-        paymentTerms: createDto.paymentTerms as any || null,
-        evaluationCriteria: createDto.evaluationCriteria as any || null,
-        termsAndConditions: createDto.termsAndConditions as any || null,
-        submissionGuidelines: createDto.submissionGuidelines as any || null,
-        additionalSections: createDto.additionalSections as any || [],
+        basicInfo: processSection(createDto.basicInfo || defaultSections.basicInfo) as any,
+        introductionAndSummary: processSection(createDto.introductionAndSummary || defaultSections.introductionAndSummary) as any,
+        scheduleAndProcedures: processSection(createDto.scheduleAndProcedures || defaultSections.scheduleAndProcedures) as any,
+        technicalRequirements: processSection(createDto.technicalRequirements || defaultSections.technicalRequirements) as any,
+        commercialTerms: processSection(createDto.commercialTerms || defaultSections.commercialTerms) as any,
+        evaluationCriteria: processSection(createDto.evaluationCriteria || defaultSections.evaluationCriteria) as any,
+        customSections: (createDto.customSections?.map(processSection) || []) as any,
         tags: createDto.tags || [],
         createdById: userId,
         lastModifiedById: userId,
@@ -74,6 +90,77 @@ export class RFxTemplatesService {
         },
       },
     });
+  }
+
+  private generateDefaultTemplateSections() {
+    return {
+      basicInfo: {
+        title: "Temel Bilgiler",
+        fields: [
+          { name: "documentTitle", label: "Doküman Başlığı", isRequired: true },
+          { name: "documentType", label: "RFX Türü", isRequired: true },
+          { name: "documentNumber", label: "Doküman Numarası", isRequired: true },
+        ],
+        isEditable: false,
+      },
+      introductionAndSummary: {
+        title: "Giriş ve Proje Özeti",
+        fields: [
+          { name: "companyInfo", label: "Şirket Bilgileri", isRequired: true },
+          { name: "projectPurpose", label: "Proje Genel Amacı", isRequired: true },
+          { name: "projectContext", label: "Proje Bağlamı ve Hedefler", isRequired: true },
+          { name: "confidentiality", label: "Gizlilik ve Sorumluluk Reddi", isRequired: false },
+        ],
+        isEditable: true,
+      },
+      scheduleAndProcedures: {
+        title: "İhale Takvimi ve Prosedürleri",
+        fields: [
+          { name: "rfpPublishDate", label: "RFP Yayın Tarihi", isRequired: true },
+          { name: "lastQuestionDate", label: "Son Soru Sorma Tarihi", isRequired: true },
+          { name: "qaMeeting", label: "Soru-Cevap Toplantısı", isRequired: false, description: "İsteğe bağlı" },
+          { name: "proposalDeadline", label: "Teklif Son Teslim Tarihi", isRequired: true },
+          { name: "evaluationDate", label: "Değerlendirme ve Seçim Tarihi", isRequired: true },
+          { name: "contractNegotiation", label: "Sözleşme Müzakereleri", isRequired: false },
+          { name: "projectStartDate", label: "Proje Başlangıç Tarihi", isRequired: true },
+          { name: "contactInfo", label: "İletişim Bilgileri", isRequired: true },
+        ],
+        isEditable: true,
+      },
+      technicalRequirements: {
+        title: "Teknik ve Fonksiyonel Gereksinimler",
+        fields: [
+          { name: "technicalSpecs", label: "Teknik Özellikler", isRequired: true },
+          { name: "functionalReqs", label: "Fonksiyonel Gereksinimler", isRequired: true },
+          { name: "projectScope", label: "Proje Kapsamı", isRequired: true },
+          { name: "expectedOutputs", label: "Beklenen Çıktılar", isRequired: true },
+          { name: "integrationCompliance", label: "Entegrasyon ve Uyum", isRequired: false },
+          { name: "supportMaintenance", label: "Destek ve Bakım", isRequired: false },
+        ],
+        isEditable: true,
+      },
+      commercialTerms: {
+        title: "Ticari ve Mali Teklif",
+        fields: [
+          { name: "pricing", label: "Fiyatlandırma", isRequired: true },
+          { name: "paymentPlan", label: "Ödeme Planı", isRequired: true },
+          { name: "optionalCosts", label: "Opsiyonel Maliyetler", isRequired: false },
+          { name: "contractTerms", label: "Sözleşme Şartları", isRequired: true },
+        ],
+        isEditable: true,
+      },
+      evaluationCriteria: {
+        title: "Teklif Değerlendirme Kriterleri",
+        fields: [
+          { name: "priceCost", label: "Fiyat/Maliyet", isRequired: true },
+          { name: "experienceRefs", label: "Deneyim ve Referanslar", isRequired: true },
+          { name: "technicalApproach", label: "Teknik Yaklaşım", isRequired: true },
+          { name: "projectTeam", label: "Proje Ekibi", isRequired: true },
+          { name: "customerSupport", label: "Müşteri Desteği", isRequired: false },
+        ],
+        isEditable: true,
+      },
+    };
   }
 
   async findAllTemplates(
@@ -162,30 +249,6 @@ export class RFxTemplatesService {
       });
     }
 
-    // If version is being updated, create a new version
-    if (updateDto.version && updateDto.version > template.version) {
-      // Archive current version
-      await this.prisma.rFxTemplate.update({
-        where: { id },
-        data: { isActive: false },
-      });
-
-      // Create new version
-      const { company, _count, ...templateData } = template;
-      return this.prisma.rFxTemplate.create({
-        data: {
-          ...templateData,
-          ...updateDto,
-          id: undefined,
-          version: updateDto.version,
-          createdById: userId,
-          lastModifiedById: userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as any,
-      });
-    }
-
     return this.prisma.rFxTemplate.update({
       where: { id },
       data: {
@@ -229,60 +292,23 @@ export class RFxTemplatesService {
       requirements?: string;
     },
   ) {
-    let context = {
-      company: null as any,
-      procurementRequest: null as any,
-      category: null as any,
-      requirements: data.requirements || '',
-    };
-
-    // Get company info
-    context.company = await this.prisma.company.findUnique({
-      where: { id: companyId },
-      select: {
-        name: true,
-        description: true,
-      },
-    });
-
-    // Get procurement request if provided
-    if (data.procurementRequestId) {
-      context.procurementRequest = await this.prisma.procurementRequest.findUnique({
-        where: { id: data.procurementRequestId },
-        include: {
-          category: true,
-          technicalSpecifications: true,
-          deliveryDetails: true,
-        },
-      });
-    }
-
-    // Get category if provided
-    if (data.categoryId) {
-      context.category = await this.prisma.category.findUnique({
-        where: { CategoryID: data.categoryId },
-      });
-    }
-
-    // Generate template using AI
-    const generatedContent = await this.aiService.generateRFxTemplate(data.type, context);
-
-    // Create the template
+    // For now, return default template sections
+    const defaultSections = this.generateDefaultTemplateSections();
+    
     return this.createTemplate(companyId, userId, {
-      name: generatedContent.name || `AI Generated ${data.type} Template`,
-      description: generatedContent.description || `Automatically generated ${data.type} template`,
+      name: `AI Generated ${data.type} Template`,
+      description: `Automatically generated ${data.type} template`,
       type: data.type,
       isDefault: false,
       isActive: true,
-      introductionSection: generatedContent.introductionSection,
-      scopeSection: generatedContent.scopeSection,
-      qualityStandards: generatedContent.qualityStandards,
-      paymentTerms: generatedContent.paymentTerms,
-      evaluationCriteria: generatedContent.evaluationCriteria,
-      termsAndConditions: generatedContent.termsAndConditions,
-      submissionGuidelines: generatedContent.submissionGuidelines,
-      additionalSections: generatedContent.additionalSections || [],
-      tags: generatedContent.tags || ['ai-generated', data.type.toLowerCase()],
+      basicInfo: defaultSections.basicInfo,
+      introductionAndSummary: defaultSections.introductionAndSummary,
+      scheduleAndProcedures: defaultSections.scheduleAndProcedures,
+      technicalRequirements: defaultSections.technicalRequirements,
+      commercialTerms: defaultSections.commercialTerms,
+      evaluationCriteria: defaultSections.evaluationCriteria,
+      customSections: [],
+      tags: ['ai-generated', data.type.toLowerCase()],
     });
   }
 
@@ -293,20 +319,19 @@ export class RFxTemplatesService {
     userId: string,
     createDto: CreateRFxDocumentDto,
   ) {
-    let templateData = {} as any;
+    let templateFields: any = null;
 
-    // If template is specified, use it as base
+    // If template is specified, get its field definitions
     if (createDto.templateId) {
       const template = await this.findTemplateById(createDto.templateId, companyId);
-      templateData = {
-        introductionSection: template.introductionSection,
-        scopeSection: template.scopeSection,
-        qualityStandards: template.qualityStandards,
-        paymentTerms: template.paymentTerms,
+      templateFields = {
+        basicInfo: template.basicInfo,
+        introductionAndSummary: template.introductionAndSummary,
+        scheduleAndProcedures: template.scheduleAndProcedures,
+        technicalRequirements: template.technicalRequirements,
+        commercialTerms: template.commercialTerms,
         evaluationCriteria: template.evaluationCriteria,
-        termsAndConditions: template.termsAndConditions,
-        submissionGuidelines: template.submissionGuidelines,
-        additionalSections: template.additionalSections,
+        customSections: template.customSections,
       };
     }
 
@@ -318,6 +343,7 @@ export class RFxTemplatesService {
         include: {
           technicalSpecifications: true,
           deliveryDetails: true,
+          category: true,
         },
       });
 
@@ -329,7 +355,7 @@ export class RFxTemplatesService {
     // Generate document number
     const documentNumber = await this.generateDocumentNumber(companyId, createDto.type);
 
-    // Create the document
+    // Create the document with filled data
     const rfxDocument = await this.prisma.rFxDocument.create({
       data: {
         companyId,
@@ -341,14 +367,25 @@ export class RFxTemplatesService {
         status: RFxStatus.DRAFT,
         submissionDeadline: new Date(createDto.submissionDeadline),
         questionDeadline: createDto.questionDeadline ? new Date(createDto.questionDeadline) : null,
-        introductionSection: createDto.introductionSection || templateData.introductionSection,
-        scopeSection: createDto.scopeSection || templateData.scopeSection,
-        qualityStandards: createDto.qualityStandards || templateData.qualityStandards,
-        paymentTerms: createDto.paymentTerms || templateData.paymentTerms,
-        evaluationCriteria: createDto.evaluationCriteria || templateData.evaluationCriteria,
-        termsAndConditions: createDto.termsAndConditions || templateData.termsAndConditions,
-        submissionGuidelines: createDto.submissionGuidelines || templateData.submissionGuidelines,
-        additionalSections: createDto.additionalSections || templateData.additionalSections || [],
+        
+        // Store filled template data
+        basicInfoData: createDto.basicInfoData || {
+          documentTitle: createDto.title,
+          documentType: createDto.type,
+          documentNumber: documentNumber,
+        },
+        introductionData: createDto.introductionData || {},
+        scheduleData: createDto.scheduleData || {
+          rfpPublishDate: new Date(),
+          proposalDeadline: createDto.submissionDeadline,
+          lastQuestionDate: createDto.questionDeadline,
+        },
+        technicalData: createDto.technicalData || procurementData?.technicalSpecifications || {},
+        commercialData: createDto.commercialData || {},
+        evaluationData: createDto.evaluationData || {},
+        customSectionsData: createDto.customSectionsData || [],
+        
+        // Procurement data
         collectedData: procurementData ? {
           itemTitle: procurementData.itemTitle,
           quantity: procurementData.quantity,
@@ -373,7 +410,11 @@ export class RFxTemplatesService {
       },
       include: {
         template: true,
-        procurementRequest: true,
+        procurementRequest: {
+          include: {
+            category: true,
+          },
+        },
         invitedSuppliers: {
           include: {
             supplier: true,
@@ -449,6 +490,7 @@ export class RFxTemplatesService {
           include: {
             technicalSpecifications: true,
             deliveryDetails: true,
+            category: true,
           },
         },
         invitedSuppliers: {
@@ -456,6 +498,11 @@ export class RFxTemplatesService {
             supplier: {
               include: {
                 contacts: true,
+                categories: {
+                  include: {
+                    category: true,
+                  },
+                },
               },
             },
           },
@@ -522,9 +569,6 @@ export class RFxTemplatesService {
       skipDuplicates: true,
     });
 
-    // TODO: Send email notifications to suppliers
-    // This would integrate with your notification service
-
     return this.prisma.rFxInvitation.findMany({
       where: {
         rfxDocumentId,
@@ -532,6 +576,28 @@ export class RFxTemplatesService {
       },
       include: {
         supplier: true,
+      },
+    });
+  }
+
+  async getSuppliersByCategory(companyId: string, categoryId: string) {
+    return this.prisma.supplier.findMany({
+      where: {
+        companyId,
+        status: 'APPROVED' as any,
+        categories: {
+          some: {
+            categoryId,
+          },
+        },
+      },
+      include: {
+        categories: {
+          include: {
+            category: true,
+          },
+        },
+        contacts: true,
       },
     });
   }
@@ -565,5 +631,19 @@ export class RFxTemplatesService {
     }
 
     return `${typePrefix}-${year}-${nextNumber.toString().padStart(5, '0')}`;
+  }
+
+  private generateSystemName(label: string): string {
+    return label
+      .toLowerCase()
+      .replace(/ğ/g, 'g')
+      .replace(/ü/g, 'u')
+      .replace(/ş/g, 's')
+      .replace(/ı/g, 'i')
+      .replace(/ö/g, 'o')
+      .replace(/ç/g, 'c')
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
   }
 }

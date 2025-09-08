@@ -237,6 +237,7 @@ model Category {
   products            Product[]
   services            Service[]
   suppliers           SupplierCategory[]
+  rfxTemplates        RFxTemplate[]
 
   @@unique([companyId, name, ParentCategoryID])
   @@index([companyId, isActive])
@@ -707,6 +708,7 @@ model CustomRole {
 model RFxTemplate {
   id                    String                 @id @default(cuid())
   companyId            String
+  categoryId           String?
   name                 String
   description          String?
   type                 RFxType
@@ -714,15 +716,14 @@ model RFxTemplate {
   isActive             Boolean                @default(true)
   version              Int                    @default(1)
   
-  // Template Sections
-  introductionSection  Json?                  // Company intro, project overview
-  scopeSection         Json?                  // Detailed requirements, deliverables
-  qualityStandards     Json?                  // Required certifications, standards
-  paymentTerms         Json?                  // Payment conditions, schedules
-  evaluationCriteria   Json?                  // Scoring matrix, weights
-  termsAndConditions   Json?                  // Legal terms, NDA, etc.
-  submissionGuidelines Json?                  // How to submit, deadline, format
-  additionalSections   Json[]                 // Custom sections
+  // Template Sections - Only field definitions, no content
+  basicInfo            Json?                  // Basic info fields to collect
+  introductionAndSummary Json?                 // Introduction and project summary fields
+  scheduleAndProcedures Json?                  // Schedule and procedures fields  
+  technicalRequirements Json?                  // Technical requirements fields
+  commercialTerms      Json?                  // Commercial terms fields
+  evaluationCriteria   Json?                  // Evaluation criteria fields
+  customSections       Json[]                 // Custom section fields
   
   // Metadata
   tags                 String[]
@@ -732,11 +733,13 @@ model RFxTemplate {
   updatedAt            DateTime               @updatedAt
   
   company              Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category             Category?              @relation(fields: [categoryId], references: [CategoryID])
   rfxDocuments         RFxDocument[]
   
   @@unique([companyId, name, version])
   @@index([companyId, isActive])
   @@index([type])
+  @@index([categoryId])
 }
 
 model RFxDocument {
@@ -757,17 +760,16 @@ model RFxDocument {
   questionDeadline     DateTime?
   awardDate            DateTime?
   
-  // Content (from template or custom)
-  introductionSection  Json?
-  scopeSection         Json
-  qualityStandards     Json
-  paymentTerms         Json
-  evaluationCriteria   Json
-  termsAndConditions   Json?
-  submissionGuidelines Json
-  additionalSections   Json[]
+  // Filled Template Content - Actual values from template fields
+  basicInfoData        Json?                  // Filled basic info
+  introductionData     Json?                  // Filled introduction and summary
+  scheduleData         Json?                  // Filled schedule and procedures
+  technicalData        Json?                  // Filled technical requirements
+  commercialData       Json?                  // Filled commercial terms
+  evaluationData       Json?                  // Filled evaluation criteria
+  customSectionsData   Json[]                 // Filled custom sections
   
-  // Procurement Request Data (Phase 4)
+  // Procurement Request Data
   collectedData        Json?                  // Phase 4 completed data
   technicalSpecs       Json?                  // Technical specifications
   quantity             Int?

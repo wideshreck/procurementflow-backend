@@ -1,5 +1,4 @@
 import { IsString, IsOptional, IsEnum, IsDateString, IsNumber, IsObject, IsArray, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
 import { RFxType } from '@prisma/client';
 
 export class CreateRFxDocumentDto {
@@ -24,40 +23,43 @@ export class CreateRFxDocumentDto {
   @IsDateString()
   questionDeadline?: string;
 
+  // Filled template data sections
   @IsOptional()
   @IsObject()
-  introductionSection?: any;
-
-  @IsObject()
-  scopeSection: any;
-
-  @IsObject()
-  qualityStandards: any;
-
-  @IsObject()
-  paymentTerms: any;
-
-  @IsObject()
-  evaluationCriteria: any;
+  basicInfoData?: Record<string, any>;
 
   @IsOptional()
   @IsObject()
-  termsAndConditions?: any;
+  introductionData?: Record<string, any>;
 
+  @IsOptional()
   @IsObject()
-  submissionGuidelines: any;
+  scheduleData?: Record<string, any>;
+
+  @IsOptional()
+  @IsObject()
+  technicalData?: Record<string, any>;
+
+  @IsOptional()
+  @IsObject()
+  commercialData?: Record<string, any>;
+
+  @IsOptional()
+  @IsObject()
+  evaluationData?: Record<string, any>;
 
   @IsOptional()
   @IsArray()
-  additionalSections?: any[];
+  customSectionsData?: Record<string, any>[];
+
+  // Additional fields
+  @IsOptional()
+  @IsObject()
+  collectedData?: Record<string, any>;
 
   @IsOptional()
   @IsObject()
-  collectedData?: any;
-
-  @IsOptional()
-  @IsObject()
-  technicalSpecs?: any;
+  technicalSpecs?: Record<string, any>;
 
   @IsOptional()
   @IsInt()
@@ -76,10 +78,10 @@ export class CreateRFxDocumentDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  tags?: string[];
+  invitedSupplierIds?: string[];
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  invitedSupplierIds?: string[];
+  tags?: string[];
 }

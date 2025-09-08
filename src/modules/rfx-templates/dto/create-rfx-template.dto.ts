@@ -1,71 +1,40 @@
-import { IsString, IsOptional, IsBoolean, IsEnum, IsArray, IsObject, ValidateNested, IsInt, Min } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsEnum, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { RFxType } from '@prisma/client';
 
-class SectionDto {
-  @IsString()
-  title: string;
-
-  @IsString()
-  content: string;
-
+class TemplateFieldDto {
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  bulletPoints?: string[];
-
-  @IsOptional()
-  @IsObject()
-  metadata?: Record<string, any>;
-}
-
-class QualityStandardDto {
   @IsString()
-  name: string;
+  name?: string;
 
   @IsString()
-  description: string;
+  label: string;
 
   @IsOptional()
   @IsString()
-  certificationRequired?: string;
+  description?: string;
 
   @IsOptional()
   @IsBoolean()
-  isMandatory?: boolean;
+  isRequired?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isEditable?: boolean;
 }
 
-class PaymentTermDto {
+class TemplateSectionDto {
   @IsString()
-  name: string;
+  title: string;
 
-  @IsString()
-  description: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TemplateFieldDto)
+  fields: TemplateFieldDto[];
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  percentage?: number;
-
-  @IsOptional()
-  @IsString()
-  milestone?: string;
-}
-
-class EvaluationCriteriaDto {
-  @IsString()
-  criteria: string;
-
-  @IsString()
-  description: string;
-
-  @IsInt()
-  @Min(0)
-  weight: number;
-
-  @IsOptional()
-  @IsString()
-  scoringMethod?: string;
+  @IsBoolean()
+  isEditable?: boolean;
 }
 
 export class CreateRFxTemplateDto {
@@ -80,6 +49,10 @@ export class CreateRFxTemplateDto {
   type: RFxType;
 
   @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @IsOptional()
   @IsBoolean()
   isDefault?: boolean;
 
@@ -87,49 +60,35 @@ export class CreateRFxTemplateDto {
   @IsBoolean()
   isActive?: boolean;
 
-  @IsOptional()
   @ValidateNested()
-  @Type(() => SectionDto)
-  introductionSection?: SectionDto;
+  @Type(() => TemplateSectionDto)
+  basicInfo: TemplateSectionDto;
 
-  @IsOptional()
   @ValidateNested()
-  @Type(() => SectionDto)
-  scopeSection?: SectionDto;
+  @Type(() => TemplateSectionDto)
+  introductionAndSummary: TemplateSectionDto;
+
+  @ValidateNested()
+  @Type(() => TemplateSectionDto)
+  scheduleAndProcedures: TemplateSectionDto;
+
+  @ValidateNested()
+  @Type(() => TemplateSectionDto)
+  technicalRequirements: TemplateSectionDto;
+
+  @ValidateNested()
+  @Type(() => TemplateSectionDto)
+  commercialTerms: TemplateSectionDto;
+
+  @ValidateNested()
+  @Type(() => TemplateSectionDto)
+  evaluationCriteria: TemplateSectionDto;
 
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => QualityStandardDto)
-  qualityStandards?: QualityStandardDto[];
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PaymentTermDto)
-  paymentTerms?: PaymentTermDto[];
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => EvaluationCriteriaDto)
-  evaluationCriteria?: EvaluationCriteriaDto[];
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => SectionDto)
-  termsAndConditions?: SectionDto;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => SectionDto)
-  submissionGuidelines?: SectionDto;
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => SectionDto)
-  additionalSections?: SectionDto[];
+  @Type(() => TemplateSectionDto)
+  customSections?: TemplateSectionDto[];
 
   @IsOptional()
   @IsArray()
