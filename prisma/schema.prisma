@@ -8,34 +8,34 @@ datasource db {
 }
 
 model User {
-  id                      String                   @id @default(cuid())
-  email                   String                   @unique
-  password                String
-  fullName                String
-  customRoleId            String?
-  customRole              CustomRole?              @relation(fields: [customRoleId], references: [id])
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
-  department              String?
-  phone                   String?
-  role_title              String?
-  isActive                Boolean                  @default(true)
-  lastLoginAt             DateTime?
-  lastLoginIp             String?
-  companyId               String
-  auditLogs               AuditLog[]
-  conversations           Conversation[]
-  ownedBudgets            CostCenter[]             @relation("BudgetOwner")
-  managedDepartments      Department[]             @relation("DepartmentManager")
-  locationContacts        Location[]               @relation("LocationContact")
-  loginAttempts           LoginAttempt[]
-  passwordResets          PasswordReset[]
-  purchaseOrders          PurchaseOrder[]
-  refreshTokens           RefreshToken[]
-  sessions                Session[]
-  company                 Company                  @relation("UserCompany", fields: [companyId], references: [id])
-  supplierDocuments       SupplierDocument[]
-  supplierMeetingNotes    SupplierMeetingNote[]
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  password             String
+  fullName             String
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  department           String?
+  phone                String?
+  role_title           String?
+  isActive             Boolean               @default(true)
+  lastLoginAt          DateTime?
+  lastLoginIp          String?
+  companyId            String
+  customRoleId         String?
+  auditLogs            AuditLog[]
+  conversations        Conversation[]
+  ownedBudgets         CostCenter[]          @relation("BudgetOwner")
+  managedDepartments   Department[]          @relation("DepartmentManager")
+  locationContacts     Location[]            @relation("LocationContact")
+  loginAttempts        LoginAttempt[]
+  passwordResets       PasswordReset[]
+  purchaseOrders       PurchaseOrder[]
+  refreshTokens        RefreshToken[]
+  sessions             Session[]
+  supplierDocuments    SupplierDocument[]
+  supplierMeetingNotes SupplierMeetingNote[]
+  company              Company               @relation("UserCompany", fields: [companyId], references: [id])
+  customRole           CustomRole?           @relation(fields: [customRoleId], references: [id])
 
   @@index([email])
   @@index([companyId])
@@ -196,23 +196,23 @@ model Service {
 }
 
 model Company {
-  id          String       @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  categories  Category[]
-  costCenters CostCenter[]
-  departments Department[]
-  locations   Location[]
-  products    Product[]
-  services    Service[]
-  suppliers   Supplier[]
-  users       User[]       @relation("UserCompany")
-  workflows   Workflow[]
-  customRoles CustomRole[]
-  rfxTemplates RFxTemplate[]
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  categories   Category[]
+  costCenters  CostCenter[]
+  customRoles  CustomRole[]
+  departments  Department[]
+  locations    Location[]
+  products     Product[]
   rfxDocuments RFxDocument[]
+  rfxTemplates RFxTemplate[]
+  services     Service[]
+  suppliers    Supplier[]
+  users        User[]        @relation("UserCompany")
+  workflows    Workflow[]
 
   @@index([name])
 }
@@ -235,9 +235,9 @@ model Category {
   company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   procurementRequests ProcurementRequest[]
   products            Product[]
+  rfxTemplates        RFxTemplate[]
   services            Service[]
   suppliers           SupplierCategory[]
-  rfxTemplates        RFxTemplate[]
 
   @@unique([companyId, name, ParentCategoryID])
   @@index([companyId, isActive])
@@ -313,7 +313,6 @@ model ProcurementRequest {
   simpleDefinition        String
   procurementType         String
   justification           String
-  purchaseFrequency       String?
   status                  RequestStatus            @default(DRAFT)
   auditTrail              Json[]
   createdAt               DateTime                 @default(now())
@@ -322,11 +321,12 @@ model ProcurementRequest {
   currency                String                   @default("TRY")
   totalPrice              Decimal                  @default(0) @db.Money
   unitPrice               Decimal                  @default(0) @db.Money
+  purchaseFrequency       String?
   deliveryDetails         DeliveryDetail?
   category                Category?                @relation(fields: [categoryId], references: [CategoryID])
+  rfxDocuments            RFxDocument[]
   technicalSpecifications TechnicalSpecification[]
   workflowInstance        WorkflowInstance?
-  rfxDocuments            RFxDocument[]
 
   @@index([categoryId])
 }
@@ -384,6 +384,351 @@ model WorkflowInstance {
   @@index([procurementRequestId])
 }
 
+model Supplier {
+  id                  String                @id @default(cuid())
+  companyId           String
+  logoUrl             String?
+  companyName         String
+  brandName           String?
+  description         String?
+  country             String
+  city                String
+  district            String
+  postalCode          String?
+  address             String
+  website             String?
+  taxOffice           String
+  taxNumber           String                @unique
+  supplierType        SupplierType
+  status              SupplierStatus        @default(PENDING_APPROVAL)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  purchaseOrders      PurchaseOrder[]
+  rfxInvitations      RFxInvitation[]
+  company             Company               @relation(fields: [companyId], references: [id])
+  supplierBids        SupplierBid[]
+  categories          SupplierCategory[]
+  contacts            SupplierContact[]
+  customFields        SupplierCustomField[]
+  documents           SupplierDocument[]
+  notes               SupplierMeetingNote[]
+  productsAndServices SupplierProduct[]
+
+  @@index([companyId])
+  @@index([companyId, status])
+}
+
+model SupplierContact {
+  id         String      @id @default(cuid())
+  supplierId String
+  fullName   String
+  email      String
+  phone      String?
+  title      String
+  role       ContactRole
+  supplier   Supplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+model SupplierDocument {
+  id           String       @id @default(cuid())
+  supplierId   String
+  title        String
+  documentType DocumentType
+  fileUrl      String
+  uploadedAt   DateTime     @default(now())
+  uploadedById String
+  validUntil   DateTime?
+  supplier     Supplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+
+  @@index([supplierId])
+  @@index([uploadedById])
+}
+
+model SupplierMeetingNote {
+  id           String   @id @default(cuid())
+  supplierId   String
+  meetingDate  DateTime
+  title        String
+  participants String
+  notes        String
+  createdById  String
+  createdBy    User     @relation(fields: [createdById], references: [id])
+  supplier     Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([createdById])
+}
+
+model SupplierCustomField {
+  id         String   @id @default(cuid())
+  supplierId String
+  fieldName  String
+  fieldValue String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+model SupplierCategory {
+  supplierId String
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [CategoryID])
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+
+  @@id([supplierId, categoryId])
+}
+
+model SupplierProduct {
+  id                 String              @id @default(cuid())
+  supplierId         String
+  name               String
+  sku                String?
+  technicalSpecs     String?
+  unit               String
+  purchaseOrderItems PurchaseOrderItem[]
+  supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+model PurchaseOrder {
+  id               String              @id @default(cuid())
+  supplierId       String
+  orderNumber      String              @unique
+  orderDate        DateTime
+  expectedDelivery DateTime
+  actualDelivery   DateTime?
+  status           PurchaseOrderStatus @default(CREATED)
+  totalAmount      Decimal             @db.Money
+  currency         String
+  createdById      String
+  notes            String?
+  createdBy        User                @relation(fields: [createdById], references: [id])
+  supplier         Supplier            @relation(fields: [supplierId], references: [id])
+  items            PurchaseOrderItem[]
+
+  @@index([supplierId])
+  @@index([createdById])
+}
+
+model PurchaseOrderItem {
+  id              String          @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  productName     String
+  quantity        Int
+  unit            String
+  unitPrice       Decimal         @db.Money
+  vatRate         Float
+  discountRate    Float           @default(0)
+  totalPrice      Decimal         @db.Money
+  status          OrderItemStatus @default(PENDING)
+  product         SupplierProduct @relation(fields: [productId], references: [id])
+  purchaseOrder   PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+}
+
+model CustomRole {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  permissions Json
+  companyId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  users       User[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model RFxTemplate {
+  id                     String        @id @default(cuid())
+  companyId              String
+  name                   String
+  description            String?
+  type                   RFxType
+  isDefault              Boolean       @default(false)
+  isActive               Boolean       @default(true)
+  version                Int           @default(1)
+  evaluationCriteria     Json?
+  tags                   String[]
+  createdById            String?
+  lastModifiedById       String?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  basicInfo              Json?
+  categoryId             String?
+  commercialTerms        Json?
+  customSections         Json[]
+  introductionAndSummary Json?
+  scheduleAndProcedures  Json?
+  technicalRequirements  Json?
+  rfxDocuments           RFxDocument[]
+  category               Category?     @relation(fields: [categoryId], references: [CategoryID])
+  company                Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name, version])
+  @@index([companyId, isActive])
+  @@index([type])
+  @@index([categoryId])
+}
+
+model RFxDocument {
+  id                   String              @id @default(cuid())
+  companyId            String
+  templateId           String?
+  procurementRequestId String?
+  documentNumber       String              @unique
+  title                String
+  type                 RFxType
+  status               RFxStatus           @default(DRAFT)
+  publishDate          DateTime?
+  submissionDeadline   DateTime
+  questionDeadline     DateTime?
+  awardDate            DateTime?
+  collectedData        Json?
+  technicalSpecs       Json?
+  quantity             Int?
+  estimatedBudget      Decimal?            @db.Money
+  currency             String              @default("TRY")
+  awardedBidId         String?             @unique
+  tags                 String[]
+  auditLog             Json[]
+  createdById          String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  basicInfoData        Json?
+  commercialData       Json?
+  customSectionsData   Json[]
+  evaluationData       Json?
+  introductionData     Json?
+  scheduleData         Json?
+  technicalData        Json?
+  evaluations          BidEvaluation[]
+  attachments          RFxAttachment[]
+  awardedBid           SupplierBid?        @relation("AwardedBid", fields: [awardedBidId], references: [id])
+  company              Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  procurementRequest   ProcurementRequest? @relation(fields: [procurementRequestId], references: [id])
+  template             RFxTemplate?        @relation(fields: [templateId], references: [id])
+  invitedSuppliers     RFxInvitation[]
+  receivedBids         SupplierBid[]
+
+  @@index([companyId, status])
+  @@index([documentNumber])
+  @@index([submissionDeadline])
+}
+
+model RFxInvitation {
+  id            String      @id @default(cuid())
+  rfxDocumentId String
+  supplierId    String
+  invitedAt     DateTime    @default(now())
+  viewedAt      DateTime?
+  respondedAt   DateTime?
+  status        String      @default("PENDING")
+  declineReason String?
+  rfxDocument   RFxDocument @relation(fields: [rfxDocumentId], references: [id], onDelete: Cascade)
+  supplier      Supplier    @relation(fields: [supplierId], references: [id])
+
+  @@unique([rfxDocumentId, supplierId])
+  @@index([supplierId])
+}
+
+model SupplierBid {
+  id                 String          @id @default(cuid())
+  rfxDocumentId      String
+  supplierId         String
+  bidNumber          String          @unique
+  status             BidStatus       @default(DRAFT)
+  coverLetter        String?
+  technicalProposal  Json
+  commercialProposal Json
+  totalPrice         Decimal         @db.Money
+  unitPrices         Json?
+  currency           String
+  validityPeriod     Int
+  deliveryTerms      Json?
+  paymentTerms       Json?
+  warrantyTerms      Json?
+  technicalScore     Float?
+  commercialScore    Float?
+  totalScore         Float?
+  ranking            Int?
+  submittedAt        DateTime?
+  withdrawnAt        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  attachments        BidAttachment[]
+  evaluations        BidEvaluation[]
+  awardedRFx         RFxDocument?    @relation("AwardedBid")
+  rfxDocument        RFxDocument     @relation(fields: [rfxDocumentId], references: [id])
+  supplier           Supplier        @relation(fields: [supplierId], references: [id])
+
+  @@unique([rfxDocumentId, supplierId])
+  @@index([rfxDocumentId, status])
+  @@index([supplierId])
+}
+
+model BidEvaluation {
+  id               String      @id @default(cuid())
+  bidId            String
+  rfxDocumentId    String
+  evaluatorId      String
+  technicalScore   Float
+  commercialScore  Float
+  qualityScore     Float?
+  deliveryScore    Float?
+  technicalWeight  Float       @default(40)
+  commercialWeight Float       @default(30)
+  qualityWeight    Float       @default(20)
+  deliveryWeight   Float       @default(10)
+  weightedScore    Float
+  strengths        String[]
+  weaknesses       String[]
+  generalComments  String?
+  recommendation   String?
+  evaluatedAt      DateTime    @default(now())
+  bid              SupplierBid @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  rfxDocument      RFxDocument @relation(fields: [rfxDocumentId], references: [id])
+
+  @@unique([bidId, evaluatorId])
+  @@index([rfxDocumentId])
+}
+
+model RFxAttachment {
+  id            String      @id @default(cuid())
+  rfxDocumentId String
+  fileName      String
+  fileUrl       String
+  fileSize      Int
+  mimeType      String
+  uploadedAt    DateTime    @default(now())
+  rfxDocument   RFxDocument @relation(fields: [rfxDocumentId], references: [id], onDelete: Cascade)
+
+  @@index([rfxDocumentId])
+}
+
+model BidAttachment {
+  id         String      @id @default(cuid())
+  bidId      String
+  fileName   String
+  fileUrl    String
+  fileSize   Int
+  mimeType   String
+  category   String?
+  uploadedAt DateTime    @default(now())
+  bid        SupplierBid @relation(fields: [bidId], references: [id], onDelete: Cascade)
+
+  @@index([bidId])
+}
 
 enum ProcurementPhase {
   IDENTIFICATION
@@ -470,9 +815,9 @@ enum WorkflowStatus {
 }
 
 enum RFxType {
-  RFQ  // Request for Quotation
-  RFP  // Request for Proposal
-  RFI  // Request for Information
+  RFQ
+  RFP
+  RFI
 }
 
 enum RFxStatus {
@@ -491,159 +836,6 @@ enum BidStatus {
   ACCEPTED
   REJECTED
   WITHDRAWN
-}
-
-// --- TEDARIKÇI YÖNETIM SAYFASI VERI MIMARISI ---
-
-// 1. Ana Tedarikçi Bilgileri
-
-model Supplier {
-  id                  String                @id @default(cuid())
-  companyId           String
-  logoUrl             String?
-  companyName         String
-  brandName           String?
-  description         String?
-  country             String
-  city                String
-  district            String
-  postalCode          String?
-  address             String
-  website             String?
-  taxOffice           String
-  taxNumber           String                @unique
-  supplierType        SupplierType
-  status              SupplierStatus        @default(PENDING_APPROVAL)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  purchaseOrders      PurchaseOrder[]
-  company             Company               @relation(fields: [companyId], references: [id])
-  categories          SupplierCategory[]
-  contacts            SupplierContact[]
-  customFields        SupplierCustomField[]
-  documents           SupplierDocument[]
-  notes               SupplierMeetingNote[]
-  productsAndServices SupplierProduct[]
-  rfxInvitations      RFxInvitation[]
-  supplierBids        SupplierBid[]
-
-  @@index([companyId])
-  @@index([companyId, status])
-}
-
-model SupplierContact {
-  id         String      @id @default(cuid())
-  supplierId String
-  fullName   String
-  email      String
-  phone      String?
-  title      String
-  role       ContactRole
-  supplier   Supplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-
-  @@index([supplierId])
-}
-
-model SupplierDocument {
-  id           String       @id @default(cuid())
-  supplierId   String
-  title        String
-  documentType DocumentType
-  fileUrl      String
-  uploadedAt   DateTime     @default(now())
-  uploadedById String
-  validUntil   DateTime?
-  supplier     Supplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
-
-  @@index([supplierId])
-  @@index([uploadedById])
-}
-
-model SupplierMeetingNote {
-  id           String   @id @default(cuid())
-  supplierId   String
-  meetingDate  DateTime
-  title        String
-  participants String
-  notes        String
-  createdById  String
-  createdBy    User     @relation(fields: [createdById], references: [id])
-  supplier     Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-
-  @@index([supplierId])
-  @@index([createdById])
-}
-
-model SupplierCustomField {
-  id         String   @id @default(cuid())
-  supplierId String
-  fieldName  String
-  fieldValue String
-  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-
-  @@index([supplierId])
-}
-
-model SupplierCategory {
-  supplierId String
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [CategoryID])
-  supplier   Supplier @relation(fields: [supplierId], references: [id])
-
-  @@id([supplierId, categoryId])
-}
-
-model SupplierProduct {
-  id                 String              @id @default(cuid())
-  supplierId         String
-  name               String
-  sku                String?
-  technicalSpecs     String?
-  unit               String
-  supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  purchaseOrderItems PurchaseOrderItem[]
-
-  @@index([supplierId])
-}
-
-model PurchaseOrder {
-  id               String              @id @default(cuid())
-  supplierId       String
-  orderNumber      String              @unique
-  orderDate        DateTime
-  expectedDelivery DateTime
-  actualDelivery   DateTime?
-  status           PurchaseOrderStatus @default(CREATED)
-  totalAmount      Decimal             @db.Money
-  currency         String
-  createdById      String
-  notes            String?
-  createdBy        User                @relation(fields: [createdById], references: [id])
-  supplier         Supplier            @relation(fields: [supplierId], references: [id])
-  items            PurchaseOrderItem[]
-
-  @@index([supplierId])
-  @@index([createdById])
-}
-
-model PurchaseOrderItem {
-  id              String          @id @default(cuid())
-  purchaseOrderId String
-  productId       String
-  productName     String
-  quantity        Int
-  unit            String
-  unitPrice       Decimal         @db.Money
-  vatRate         Float
-  discountRate    Float           @default(0)
-  totalPrice      Decimal         @db.Money
-  status          OrderItemStatus @default(PENDING)
-  product         SupplierProduct @relation(fields: [productId], references: [id])
-  purchaseOrder   PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-
-  @@index([purchaseOrderId])
-  @@index([productId])
 }
 
 enum SupplierType {
@@ -686,246 +878,4 @@ enum OrderItemStatus {
   PENDING
   DELIVERED
   OUT_OF_STOCK
-}
-
-model CustomRole {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  color       String?
-  permissions Json
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  users       User[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([companyId, name])
-  @@index([companyId])
-}
-
-// RFx Template System Models
-model RFxTemplate {
-  id                    String                 @id @default(cuid())
-  companyId            String
-  categoryId           String?
-  name                 String
-  description          String?
-  type                 RFxType
-  isDefault            Boolean                @default(false)
-  isActive             Boolean                @default(true)
-  version              Int                    @default(1)
-  
-  // Template Sections - Only field definitions, no content
-  basicInfo            Json?                  // Basic info fields to collect
-  introductionAndSummary Json?                 // Introduction and project summary fields
-  scheduleAndProcedures Json?                  // Schedule and procedures fields  
-  technicalRequirements Json?                  // Technical requirements fields
-  commercialTerms      Json?                  // Commercial terms fields
-  evaluationCriteria   Json?                  // Evaluation criteria fields
-  customSections       Json[]                 // Custom section fields
-  
-  // Metadata
-  tags                 String[]
-  createdById          String?
-  lastModifiedById     String?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  
-  company              Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  category             Category?              @relation(fields: [categoryId], references: [CategoryID])
-  rfxDocuments         RFxDocument[]
-  
-  @@unique([companyId, name, version])
-  @@index([companyId, isActive])
-  @@index([type])
-  @@index([categoryId])
-}
-
-model RFxDocument {
-  id                    String                 @id @default(cuid())
-  companyId            String
-  templateId           String?
-  procurementRequestId String?
-  
-  // Document Info
-  documentNumber       String                 @unique
-  title                String
-  type                 RFxType
-  status               RFxStatus              @default(DRAFT)
-  
-  // Dates
-  publishDate          DateTime?
-  submissionDeadline   DateTime
-  questionDeadline     DateTime?
-  awardDate            DateTime?
-  
-  // Filled Template Content - Actual values from template fields
-  basicInfoData        Json?                  // Filled basic info
-  introductionData     Json?                  // Filled introduction and summary
-  scheduleData         Json?                  // Filled schedule and procedures
-  technicalData        Json?                  // Filled technical requirements
-  commercialData       Json?                  // Filled commercial terms
-  evaluationData       Json?                  // Filled evaluation criteria
-  customSectionsData   Json[]                 // Filled custom sections
-  
-  // Procurement Request Data
-  collectedData        Json?                  // Phase 4 completed data
-  technicalSpecs       Json?                  // Technical specifications
-  quantity             Int?
-  estimatedBudget      Decimal?               @db.Money
-  currency             String                 @default("TRY")
-  
-  // Supplier Management
-  invitedSuppliers     RFxInvitation[]
-  receivedBids         SupplierBid[]
-  evaluations          BidEvaluation[]
-  awardedBid           SupplierBid?           @relation("AwardedBid", fields: [awardedBidId], references: [id])
-  awardedBidId         String?                @unique
-  
-  // Metadata
-  tags                 String[]
-  attachments          RFxAttachment[]
-  auditLog             Json[]
-  createdById          String?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  
-  company              Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  template             RFxTemplate?           @relation(fields: [templateId], references: [id])
-  procurementRequest   ProcurementRequest?    @relation(fields: [procurementRequestId], references: [id])
-  
-  @@index([companyId, status])
-  @@index([documentNumber])
-  @@index([submissionDeadline])
-}
-
-model RFxInvitation {
-  id               String       @id @default(cuid())
-  rfxDocumentId    String
-  supplierId       String
-  invitedAt        DateTime     @default(now())
-  viewedAt         DateTime?
-  respondedAt      DateTime?
-  status           String       @default("PENDING") // PENDING, VIEWED, RESPONDED, DECLINED
-  declineReason    String?
-  
-  rfxDocument      RFxDocument  @relation(fields: [rfxDocumentId], references: [id], onDelete: Cascade)
-  supplier         Supplier     @relation(fields: [supplierId], references: [id])
-  
-  @@unique([rfxDocumentId, supplierId])
-  @@index([supplierId])
-}
-
-model SupplierBid {
-  id                String          @id @default(cuid())
-  rfxDocumentId     String
-  supplierId        String
-  bidNumber         String          @unique
-  status            BidStatus       @default(DRAFT)
-  
-  // Bid Content
-  coverLetter       String?
-  technicalProposal Json
-  commercialProposal Json
-  
-  // Pricing
-  totalPrice        Decimal         @db.Money
-  unitPrices        Json?           // Detailed pricing breakdown
-  currency          String
-  validityPeriod    Int             // Days
-  
-  // Terms
-  deliveryTerms     Json?
-  paymentTerms      Json?
-  warrantyTerms     Json?
-  
-  // Attachments
-  attachments       BidAttachment[]
-  
-  // Scoring
-  technicalScore    Float?
-  commercialScore   Float?
-  totalScore        Float?
-  ranking           Int?
-  
-  // Metadata
-  submittedAt       DateTime?
-  withdrawnAt       DateTime?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  
-  rfxDocument       RFxDocument     @relation(fields: [rfxDocumentId], references: [id])
-  awardedRFx        RFxDocument?    @relation("AwardedBid")
-  supplier          Supplier        @relation(fields: [supplierId], references: [id])
-  evaluations       BidEvaluation[]
-  
-  @@unique([rfxDocumentId, supplierId])
-  @@index([rfxDocumentId, status])
-  @@index([supplierId])
-}
-
-model BidEvaluation {
-  id              String       @id @default(cuid())
-  bidId           String
-  rfxDocumentId   String
-  evaluatorId     String
-  
-  // Scores
-  technicalScore  Float        // 0-100
-  commercialScore Float        // 0-100
-  qualityScore    Float?       // 0-100
-  deliveryScore   Float?       // 0-100
-  
-  // Weights (should sum to 100)
-  technicalWeight Float        @default(40)
-  commercialWeight Float       @default(30)
-  qualityWeight   Float        @default(20)
-  deliveryWeight  Float        @default(10)
-  
-  // Calculated
-  weightedScore   Float
-  
-  // Comments
-  strengths       String[]
-  weaknesses      String[]
-  generalComments String?
-  recommendation  String?      // ACCEPT, REJECT, NEGOTIATE
-  
-  evaluatedAt     DateTime     @default(now())
-  
-  bid             SupplierBid  @relation(fields: [bidId], references: [id], onDelete: Cascade)
-  rfxDocument     RFxDocument  @relation(fields: [rfxDocumentId], references: [id])
-  
-  @@unique([bidId, evaluatorId])
-  @@index([rfxDocumentId])
-}
-
-model RFxAttachment {
-  id            String      @id @default(cuid())
-  rfxDocumentId String
-  fileName      String
-  fileUrl       String
-  fileSize      Int
-  mimeType      String
-  uploadedAt    DateTime    @default(now())
-  
-  rfxDocument   RFxDocument @relation(fields: [rfxDocumentId], references: [id], onDelete: Cascade)
-  
-  @@index([rfxDocumentId])
-}
-
-model BidAttachment {
-  id           String      @id @default(cuid())
-  bidId        String
-  fileName     String
-  fileUrl      String
-  fileSize     Int
-  mimeType     String
-  category     String?     // TECHNICAL, COMMERCIAL, CERTIFICATE, OTHER
-  uploadedAt   DateTime    @default(now())
-  
-  bid          SupplierBid @relation(fields: [bidId], references: [id], onDelete: Cascade)
-  
-  @@index([bidId])
 }

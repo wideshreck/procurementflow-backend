@@ -67,7 +67,7 @@ export class RFxTemplatesService {
         name: createDto.name,
         description: createDto.description,
         type: createDto.type,
-        categoryId: createDto.categoryId,
+        categoryId: createDto.categoryId, // TODO: Uncomment after database migration
         isDefault: createDto.isDefault || false,
         isActive: createDto.isActive ?? true,
         basicInfo: processSection(createDto.basicInfo || defaultSections.basicInfo) as any,
@@ -584,7 +584,7 @@ export class RFxTemplatesService {
     return this.prisma.supplier.findMany({
       where: {
         companyId,
-        status: 'APPROVED' as any,
+        status: 'ACTIVE',
         categories: {
           some: {
             categoryId,

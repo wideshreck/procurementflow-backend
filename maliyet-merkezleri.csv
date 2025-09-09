@@ -1,0 +1,57 @@
+﻿name,description,budget,remainingBudget,spentBudget,budgetOwnerEmail,budgetOwnerName,departmentName,locationName
+Acil Durum Fonu,Beklenmedik giderler ve acil durum fonu,709045,659045,50000,admin@procurementflow.com,Admin,Üst Yönetim,Tavuk Dünyası Genel Merkez
+Ana Mutfak,Ana mutfak gıda üretim ve hammadde giderleri,2827629,1909745,917884,admin@procurementflow.com,Admin,Mutfak ve Üretim,Tavuk Dünyası Genel Merkez
+Araç Filosu,Şirket araçları bakım ve yakıt giderleri,345483,218258,127225,admin@procurementflow.com,Admin,Lojistik,Tavuk Dünyası Genel Merkez
+Ataşehir Şube,Ataşehir şube restoran operasyon giderleri,830777,661397,169380,admin@procurementflow.com,Admin,Restoran Operasyonları,Tavuk Dünyası Genel Merkez
+Atık Yönetimi,Atık yönetimi ve geri dönüşüm giderleri,159096,119096,40000,admin@procurementflow.com,Admin,Sürdürülebilirlik,Tavuk Dünyası Genel Merkez
+Baharatlar ve Soslar,Baharat ve sos malzemeleri tedarik giderleri,535471,365878,169593,admin@procurementflow.com,Admin,Satın Alma,Tavuk Dünyası Genel Merkez
+Bakım Onarım,Bina ve tesis bakım onarım giderleri,427579,304193,123386,admin@procurementflow.com,Admin,Tesis Yönetimi,Tavuk Dünyası Genel Merkez
+Banka İşlemleri,Banka işlem ve komisyon giderleri,114236,77671,36565,admin@procurementflow.com,Admin,Mali İşler,Tavuk Dünyası Genel Merkez
+Basılı Malzeme,"Menü, broşür, afiş vb. basılı malzemeler",217439,159074,58365,admin@procurementflow.com,Admin,Pazarlama,Tavuk Dünyası Genel Merkez
+Beşiktaş Şube,Beşiktaş şube restoran operasyon giderleri,612712,462733,149979,admin@procurementflow.com,Admin,Restoran Operasyonları,Tavuk Dünyası Genel Merkez
+Çağrı Merkezi,Çağrı merkezi operasyon giderleri,261648,201648,60000,admin@procurementflow.com,Admin,Müşteri Hizmetleri,Tavuk Dünyası Genel Merkez
+CRM Sistemi,Müşteri ilişkileri yönetimi sistem giderleri,130235,100235,30000,admin@procurementflow.com,Admin,Müşteri Hizmetleri,Tavuk Dünyası Genel Merkez
+Depolama,Depo ve soğuk hava deposu giderleri,403774,275718,128056,admin@procurementflow.com,Admin,Lojistik,Tavuk Dünyası Genel Merkez
+Dijital Pazarlama,Dijital pazarlama ve reklam giderleri,587083,440905,146178,admin@procurementflow.com,Admin,Pazarlama,Tavuk Dünyası Genel Merkez
+Donanım,Bilgisayar ve donanım alım giderleri,362857,271976,90881,admin@procurementflow.com,Admin,Bilgi Teknolojileri,Tavuk Dünyası Genel Merkez
+Enerji,"Elektrik, gaz, su giderleri",731792,481792,250000,admin@procurementflow.com,Admin,Tesis Yönetimi,Tavuk Dünyası Genel Merkez
+Etkinlikler,Özel etkinlik ve organizasyon giderleri,266034,236034,30000,admin@procurementflow.com,Admin,Pazarlama,Tavuk Dünyası Genel Merkez
+Franchise Destek,Franchise destek ve danışmanlık giderleri,433118,339815,93303,admin@procurementflow.com,Admin,Franchise İşlemleri,Tavuk Dünyası Genel Merkez
+Franchise Eğitim,Franchise eğitim ve sertifikasyon giderleri,267440,208847,58593,admin@procurementflow.com,Admin,Franchise İşlemleri,Tavuk Dünyası Genel Merkez
+Gıda Güvenliği,Gıda güvenliği test ve sertifikasyon giderleri,257031,197031,60000,admin@procurementflow.com,Admin,Kalite Kontrol,Tavuk Dünyası Genel Merkez
+Güvenlik,Güvenlik sistemi ve hizmet giderleri,248282,178831,69451,admin@procurementflow.com,Admin,Tesis Yönetimi,Tavuk Dünyası Genel Merkez
+Hijyen Denetim,Hijyen denetim ve kontrol giderleri,135695,97546,38149,admin@procurementflow.com,Admin,Kalite Kontrol,Tavuk Dünyası Genel Merkez
+Hukuki İşler,Hukuki danışmanlık ve dava giderleri,164937,134937,30000,admin@procurementflow.com,Admin,Mali İşler,Tavuk Dünyası Genel Merkez
+İşe Alım,İşe alım ve yerleştirme giderleri,146055,107571,38484,admin@procurementflow.com,Admin,İnsan Kaynakları,Tavuk Dünyası Genel Merkez
+Kadıköy Şube,Kadıköy şube restoran operasyon giderleri,678350,528350,150000,admin@procurementflow.com,Admin,Restoran Operasyonları,Tavuk Dünyası Genel Merkez
+Laboratuvar,Laboratuvar test ve analiz giderleri,207653,143916,63737,admin@procurementflow.com,Admin,Kalite Kontrol,Tavuk Dünyası Genel Merkez
+Maltepe Şube,Maltepe şube restoran operasyon giderleri,565118,445118,120000,admin@procurementflow.com,Admin,Restoran Operasyonları,Tavuk Dünyası Genel Merkez
+Menü Geliştirme,Menü yenileme ve geliştirme giderleri,213280,163280,50000,admin@procurementflow.com,Admin,Ar-Ge,Tavuk Dünyası Genel Merkez
+Muhasebe,Muhasebe ve mali danışmanlık giderleri,202000,145989,56011,admin@procurementflow.com,Admin,Mali İşler,Tavuk Dünyası Genel Merkez
+Mutfak Ekipman Bakım,Mutfak ekipmanları alım ve bakım giderleri,374613,316084,58529,admin@procurementflow.com,Admin,Mutfak ve Üretim,Tavuk Dünyası Genel Merkez
+Nakliye,Ürün nakliye ve dağıtım giderleri,593792,413982,179810,admin@procurementflow.com,Admin,Lojistik,Tavuk Dünyası Genel Merkez
+Network ve Altyapı,Network altyapı ve internet giderleri,160813,109031,51782,admin@procurementflow.com,Admin,Bilgi Teknolojileri,Tavuk Dünyası Genel Merkez
+Paket Servis Ambalaj,Paket servis ambalaj malzemeleri,419390,299390,120000,admin@procurementflow.com,Admin,Satın Alma,Tavuk Dünyası Genel Merkez
+Pandemi Önlemleri,Sağlık ve pandemi önlem giderleri,264937,203535,61402,admin@procurementflow.com,Admin,Üst Yönetim,Tavuk Dünyası Genel Merkez
+Pazar Araştırma,Pazar araştırma ve analiz giderleri,149658,112867,36791,admin@procurementflow.com,Admin,Ar-Ge,Tavuk Dünyası Genel Merkez
+Personel Eğitim,Personel eğitim ve gelişim giderleri,211262,156201,55061,admin@procurementflow.com,Admin,İnsan Kaynakları,Tavuk Dünyası Genel Merkez
+Personel Giyim,Personel üniforma ve giyim giderleri,299253,242167,57086,admin@procurementflow.com,Admin,İnsan Kaynakları,Tavuk Dünyası Genel Merkez
+POS ve Ödeme Sistemleri,POS cihazları ve ödeme sistemi giderleri,201625,151625,50000,admin@procurementflow.com,Admin,Bilgi Teknolojileri,Tavuk Dünyası Genel Merkez
+Promosyon,Promosyon ve kampanya malzemeleri,293491,233491,60000,admin@procurementflow.com,Admin,Pazarlama,Tavuk Dünyası Genel Merkez
+Renovasyon,Restoran renovasyon ve yenileme giderleri,1170802,1057413,113389,admin@procurementflow.com,Admin,Tesis Yönetimi,Tavuk Dünyası Genel Merkez
+Restoran İçi Servis,Restoran içi servis malzemeleri,295228,201427,93801,admin@procurementflow.com,Admin,Satın Alma,Tavuk Dünyası Genel Merkez
+Sadakat Programı,Müşteri sadakat programı giderleri,346400,276400,70000,admin@procurementflow.com,Admin,Müşteri Hizmetleri,Tavuk Dünyası Genel Merkez
+Sebze ve Meyve,Yaş sebze ve meyve tedarik giderleri,1100367,718538,381829,admin@procurementflow.com,Admin,Satın Alma,Tavuk Dünyası Genel Merkez
+Sıcak Mutfak,Sıcak mutfak üretim giderleri,725537,545537,180000,admin@procurementflow.com,Admin,Mutfak ve Üretim,Tavuk Dünyası Genel Merkez
+Sigorta,İşletme sigortaları ve poliçe giderleri,277976,227976,50000,admin@procurementflow.com,Admin,Mali İşler,Tavuk Dünyası Genel Merkez
+Soğuk Mutfak,Soğuk mutfak üretim giderleri,424983,304983,120000,admin@procurementflow.com,Admin,Mutfak ve Üretim,Tavuk Dünyası Genel Merkez
+Sosyal Aktiviteler,Personel sosyal aktivite ve motivasyon giderleri,176413,136413,40000,admin@procurementflow.com,Admin,İnsan Kaynakları,Tavuk Dünyası Genel Merkez
+Sürdürülebilirlik Projeleri,Sürdürülebilirlik projeleri giderleri,200693,170693,30000,admin@procurementflow.com,Admin,Sürdürülebilirlik,Tavuk Dünyası Genel Merkez
+Süt ve Süt Ürünleri,"Süt, yoğurt, peynir vb. ürünler",599258,404421,194837,admin@procurementflow.com,Admin,Satın Alma,Tavuk Dünyası Genel Merkez
+Tavuk ve Kanatlı,Tavuk ve kanatlı ürünleri tedarik giderleri,4943712,3315282,1628430,admin@procurementflow.com,Admin,Satın Alma,Tavuk Dünyası Genel Merkez
+Temizlik Malzemeleri,Temizlik ve hijyen malzemeleri,373586,259612,113974,admin@procurementflow.com,Admin,Satın Alma,Tavuk Dünyası Genel Merkez
+Un ve Tahıllar,"Un, ekmek ve tahıl ürünleri tedarik giderleri",487318,337318,150000,admin@procurementflow.com,Admin,Satın Alma,Tavuk Dünyası Genel Merkez
+Üsküdar Şube,Üsküdar şube restoran operasyon giderleri,791355,641355,150000,admin@procurementflow.com,Admin,Restoran Operasyonları,Tavuk Dünyası Genel Merkez
+Yağlar ve Kızartma,Yemeklik yağ ve kızartma malzemeleri,878234,595403,282831,admin@procurementflow.com,Admin,Satın Alma,Tavuk Dünyası Genel Merkez
+Yazılım,Yazılım lisans ve geliştirme giderleri,460786,360786,100000,admin@procurementflow.com,Admin,Bilgi Teknolojileri,Tavuk Dünyası Genel Merkez
+Yeni Ürün Geliştirme,Yeni ürün geliştirme ve test giderleri,292222,242222,50000,admin@procurementflow.com,Admin,Ar-Ge,Tavuk Dünyası Genel Merkez
