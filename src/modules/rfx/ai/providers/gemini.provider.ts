@@ -158,8 +158,16 @@ export class GeminiProvider implements AIProvider {
       Kategori: ${request.category}
       ${request.fieldDescription ? `Alan Açıklaması: ${request.fieldDescription}` : ''}
       ${request.companyContext ? `Şirket Bağlamı: ${request.companyContext}` : ''}
+      ${request.procurementContext ? `Alım Talebi Detayları: ${request.procurementContext}` : ''}
       
-      Lütfen profesyonel, detaylı ve Türkçe bir içerik oluştur. Sadece içeriği döndür, başka açıklama ekleme.
+      ÖNEMLİ KURALLAR:
+      1. SADECE içeriğin kendisini döndür, alan adını veya başlık EKLEME
+      2. Direkt kullanılabilecek profesyonel içerik oluştur
+      3. Alım talebi detaylarını (miktar, ürün, özellikler) içeriğe dahil et
+      4. Türkçe kullan ve resmi bir dil kullan
+      5. Başlık, alan adı veya ekstra açıklama EKLEME
+      
+      Örnek: Eğer alan "Teknik Özellikler" ise, "Teknik Özellikler:" diye başlama, direkt içeriği yaz.
     `;
   }
 
@@ -170,7 +178,11 @@ export class GeminiProvider implements AIProvider {
       "${request.sectionTitle}" bölümü için ek alan önerileri oluştur.
       RFx Türü: ${request.rfxType}
       Kategori: ${request.category}
+      ${(request as any).procurementContext ? `Alım Talebi: ${(request as any).procurementContext}` : ''}
       Mevcut Alanlar: ${request.existingFields.join(', ')}
+      
+      Alım talebinin özelliklerini dikkate alarak özel alanlar öner.
+      Örneğin: Eğer bilgisayar alımı ise "İşlemci Özellikleri", "RAM Kapasitesi" gibi.
       
       Sadece JSON formatında yanıt ver, başka açıklama ekleme. Format:
       {
@@ -184,7 +196,7 @@ export class GeminiProvider implements AIProvider {
         ]
       }
       
-      3-5 öneri ver. Türkçe kullan.
+      3-5 öneri ver. Türkçe kullan. Kategori ve alım talebine özel alanlar öner.
     `;
   }
 

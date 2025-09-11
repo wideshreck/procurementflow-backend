@@ -17,6 +17,7 @@ export interface GenerateContentRequest {
   rfxType: 'RFQ' | 'RFP' | 'RFI';
   category: string;
   companyContext?: string;
+  procurementContext?: string;
 }
 
 export interface SuggestFieldsRequest {
