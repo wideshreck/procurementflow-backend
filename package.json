@@ -21,6 +21,7 @@
     "create:admin": "ts-node -r tsconfig-paths/register src/scripts/create-admin.ts"
   },
   "dependencies": {
+    "@azure/openai": "^2.0.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.1.0",
     "@fastify/helmet": "^13.0.1",
@@ -53,7 +54,7 @@
     "nestjs-pino": "^4.4.0",
     "nestjs-zod": "^4.3.1",
     "nodemailer": "^7.0.5",
-    "openai": "^5.19.1",
+    "openai": "^5.20.1",
     "papaparse": "^5.5.3",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

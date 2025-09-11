@@ -10,7 +10,7 @@ import {
 } from '@google/generative-ai';
 import { Env } from '../../../../config/environment';
 import { ChatbotResponse } from '../../dto/chatbot.dto';
-
+/* Not used */
 export interface GenerateResponseParams {
   systemPrompt: string;
   history: { role: 'user' | 'model'; parts: { text: string }[] }[];

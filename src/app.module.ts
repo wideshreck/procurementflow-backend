@@ -24,6 +24,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { FilesModule } from './modules/files/files.module';
 import { CustomRolesModule } from './modules/custom-roles/custom-roles.module';
 import { RFxTemplatesModule } from './modules/rfx-templates/rfx-templates.module';
+import { AIModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { RFxTemplatesModule } from './modules/rfx-templates/rfx-templates.module
     FilesModule,
     CustomRolesModule,
     RFxTemplatesModule,
+    AIModule,
   ],
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },

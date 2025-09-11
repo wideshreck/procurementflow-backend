@@ -4,7 +4,7 @@ import { CreateRFxTemplateDto } from './dto/create-rfx-template.dto';
 import { UpdateRFxTemplateDto } from './dto/update-rfx-template.dto';
 import { CreateRFxDocumentDto } from './dto/create-rfx-document.dto';
 import { RFxType, RFxStatus, Prisma } from '@prisma/client';
-import { AIService } from './ai/ai.service';
+import { AIService } from '../../services/ai.service';
 
 @Injectable()
 export class RFxTemplatesService {
