@@ -9,9 +9,10 @@ import { Phase1Service } from './phase1/services/phase1.service';
 import { Phase2Service } from './phase2/services/phase2.service';
 import { Phase3Service } from './phase3/services/phase3.service';
 import { Phase4Service } from './phase4/services/phase4.service';
+import { WorkflowModule } from '../workflow/workflow.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, WorkflowModule],
   controllers: [ProcurementController],
   providers: [
     ProcurementService,

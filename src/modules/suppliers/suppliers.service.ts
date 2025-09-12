@@ -29,30 +29,75 @@ export class SuppliersService {
   }
 
   async findAll(params: {
-    skip?: number;
-    take?: number;
-    cursor?: Prisma.SupplierWhereUniqueInput;
-    where?: Prisma.SupplierWhereInput;
-    orderBy?: Prisma.SupplierOrderByWithRelationInput;
-  }): Promise<Supplier[]> {
-    const { skip, take, cursor, where, orderBy } = params;
+    search?: string;
+    status?: string;
+    supplierType?: string;
+    category?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: string;
+    companyId?: string;
+  }): Promise<{ suppliers: Supplier[]; total: number; page: number; limit: number; totalPages: number }> {
+    const { search, status, supplierType, category, page = 1, limit = 10, sortBy = 'companyName', sortOrder = 'asc', companyId } = params;
 
-    return this.prisma.supplier.findMany({
-      skip,
-      take,
-      cursor,
-      where,
-      orderBy,
-      include: {
-        contacts: true,
-        documents: true,
-        notes: true,
-        customFields: true,
-        categories: { include: { category: true } },
-        productsAndServices: true,
-        purchaseOrders: { include: { items: true } },
-      },
-    });
+    // Build where clause
+    const where: Prisma.SupplierWhereInput = {
+      ...(companyId && { companyId }),
+      ...(status && { status: status as any }),
+      ...(supplierType && { supplierType: supplierType as any }),
+      ...(search && {
+        OR: [
+          { companyName: { contains: search, mode: 'insensitive' } },
+          { brandName: { contains: search, mode: 'insensitive' } },
+          { taxNumber: { contains: search, mode: 'insensitive' } },
+          { contacts: { some: { fullName: { contains: search, mode: 'insensitive' } } } },
+        ],
+      }),
+      ...(category && {
+        categories: { some: { category: { name: { contains: category, mode: 'insensitive' } } } },
+      }),
+    };
+
+    // Build orderBy clause
+    const orderBy: Prisma.SupplierOrderByWithRelationInput = {
+      [sortBy]: sortOrder === 'desc' ? 'desc' : 'asc',
+    };
+
+    const skip = (page - 1) * limit;
+
+    const [suppliers, total] = await Promise.all([
+      this.prisma.supplier.findMany({
+        skip,
+        take: limit,
+        where,
+        orderBy,
+        include: {
+          contacts: true,
+          documents: true,
+          notes: true,
+          customFields: true,
+          categories: { include: { category: true } },
+          productsAndServices: true,
+          purchaseOrders: { 
+            include: { items: true },
+            orderBy: { orderDate: 'desc' },
+            take: 5 // Only latest 5 orders for performance
+          },
+        },
+      }),
+      this.prisma.supplier.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      suppliers,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
   }
 
   async findOne(where: Prisma.SupplierWhereUniqueInput): Promise<Supplier | null> {
@@ -144,5 +189,57 @@ export class SuppliersService {
 
   async remove(where: Prisma.SupplierWhereUniqueInput): Promise<Supplier> {
     return this.prisma.supplier.delete({ where });
+  }
+
+  async bulkDelete(ids: string[], companyId?: string): Promise<{ count: number }> {
+    const whereClause: Prisma.SupplierWhereInput = {
+      id: { in: ids },
+      ...(companyId && { companyId }),
+    };
+
+    return this.prisma.supplier.deleteMany({
+      where: whereClause,
+    });
+  }
+
+  async export(params: {
+    search?: string;
+    status?: string;
+    supplierType?: string;
+    category?: string;
+    companyId?: string;
+  }): Promise<Supplier[]> {
+    const { search, status, supplierType, category, companyId } = params;
+
+    // Build where clause (same as findAll)
+    const where: Prisma.SupplierWhereInput = {
+      ...(companyId && { companyId }),
+      ...(status && { status: status as any }),
+      ...(supplierType && { supplierType: supplierType as any }),
+      ...(search && {
+        OR: [
+          { companyName: { contains: search, mode: 'insensitive' } },
+          { brandName: { contains: search, mode: 'insensitive' } },
+          { taxNumber: { contains: search, mode: 'insensitive' } },
+          { contacts: { some: { fullName: { contains: search, mode: 'insensitive' } } } },
+        ],
+      }),
+      ...(category && {
+        categories: { some: { category: { name: { contains: category, mode: 'insensitive' } } } },
+      }),
+    };
+
+    return this.prisma.supplier.findMany({
+      where,
+      orderBy: { companyName: 'asc' },
+      include: {
+        contacts: true,
+        categories: { include: { category: true } },
+        purchaseOrders: { 
+          include: { items: true },
+          orderBy: { orderDate: 'desc' }
+        },
+      },
+    });
   }
 }

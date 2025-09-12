@@ -25,7 +25,7 @@ import { User } from '@prisma/client';
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly users: UsersService,
+    public readonly users: UsersService,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly crypto: CryptoService,
@@ -449,9 +449,12 @@ export class AuthService {
   }
 
   private sanitizeUser(user: any): Omit<User, 'password'> {
-      if (!user) return user;
-      const { password, ...sanitized } = user;
-      return sanitized;
+    if (!user) return user;
+    const { password, ...sanitized } = user;
+    return {
+      ...sanitized,
+      customRole: user.customRole,
+    };
   }
 
   private extractDeviceInfo(userAgent?: string): DeviceInfo | undefined {

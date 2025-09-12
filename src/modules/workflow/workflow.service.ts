@@ -140,7 +140,7 @@ export class WorkflowService {
       this.validator.validate({
         // Construct a DTO-like object for validation
         name: rest.name || existingWorkflow.name,
-        description: rest.description || existingWorkflow.description,
+        description: rest.description || existingWorkflow.description || undefined,
         departmentId: rest.departmentId || existingWorkflow.departmentId || undefined,
         isActive: rest.isActive !== undefined ? rest.isActive : existingWorkflow.isActive,
         nodes,

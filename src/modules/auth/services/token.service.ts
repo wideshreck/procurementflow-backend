@@ -111,67 +111,102 @@ export class TokenService {
       throw new UnauthorizedException('Invalid token type');
     }
 
-    // Find the stored token
-    const storedToken = await (this.prisma as any).refreshToken.findUnique({
-      where: { token: oldToken },
-      include: { user: { include: { customRole: true } } },
-    });
+    // Use a transaction to prevent race conditions
+    return await (this.prisma as any).$transaction(async (tx: any) => {
+      // Find the stored token
+      const storedToken = await tx.refreshToken.findUnique({
+        where: { token: oldToken },
+        include: { user: { include: { customRole: true } } },
+      });
 
-    if (!storedToken || storedToken.isRevoked) {
-      // Token reuse detected - revoke entire family
-      if (storedToken) {
-        await this.revokeTokenFamily(storedToken.family);
+      if (!storedToken || storedToken.isRevoked) {
+        // Token reuse detected - revoke entire family
+        if (storedToken) {
+          await tx.refreshToken.updateMany({
+            where: { family: storedToken.family },
+            data: {
+              isRevoked: true,
+              revokedAt: new Date(),
+            },
+          });
+        }
+        throw new UnauthorizedException('Token reuse detected');
       }
-      throw new UnauthorizedException('Token reuse detected');
-    }
 
-    // Check if token is expired
-    if (storedToken.expiresAt < new Date()) {
-      await this.revokeToken(oldToken);
-      throw new UnauthorizedException('Refresh token expired');
-    }
+      const now = new Date();
 
-    // Check if user is still active
-    if (!storedToken.user.isActive) {
-      await this.revokeToken(oldToken);
-      throw new UnauthorizedException('User account is disabled');
-    }
+      // Check if token is expired
+      if (storedToken.expiresAt < now) {
+        await tx.refreshToken.update({
+          where: { token: oldToken },
+          data: {
+            isRevoked: true,
+            revokedAt: now,
+          },
+        });
+        throw new UnauthorizedException('Refresh token expired');
+      }
 
-    // Revoke old token
-    await this.revokeToken(oldToken);
+      // Check if user is still active
+      if (!storedToken.user.isActive) {
+        await tx.refreshToken.update({
+          where: { token: oldToken },
+          data: {
+            isRevoked: true,
+            revokedAt: now,
+          },
+        });
+        throw new UnauthorizedException('User account is disabled');
+      }
 
-    // Generate new tokens with same family
-    const csrfToken = this.crypto.generateSecureToken(16);
-    const permissions = storedToken.user.customRole?.permissions as string[] || [];
-    const jti = this.crypto.generateSecureToken(16);
-    const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken({
-        sub: storedToken.userId,
-        email: storedToken.user.email,
-        permissions,
-        sessionId: payload.sessionId,
-      }),
-      this.generateRefreshToken({
-        sub: storedToken.userId,
-        email: storedToken.user.email,
-        family: storedToken.family,
-        sessionId: payload.sessionId,
-        jti,
-        type: 'refresh',
-      }),
-    ]);
+      // Revoke old token
+      await tx.refreshToken.update({
+        where: { token: oldToken },
+        data: {
+          isRevoked: true,
+          revokedAt: now,
+        },
+      });
 
-    // Store new refresh token
-    await this.storeRefreshToken(
-      storedToken.userId,
-      refreshToken,
-      storedToken.family,
-      ipAddress || storedToken.ipAddress || undefined,
-      userAgent || storedToken.userAgent || undefined,
-      storedToken.deviceInfo,
-    );
+      // Generate new tokens with same family
+      const csrfToken = this.crypto.generateSecureToken(16);
+      const permissions = storedToken.user.customRole?.permissions as string[] || [];
+      const jti = this.crypto.generateSecureToken(16);
+      const [accessToken, refreshToken] = await Promise.all([
+        this.generateAccessToken({
+          sub: storedToken.userId,
+          email: storedToken.user.email,
+          permissions,
+          sessionId: payload.sessionId,
+        }),
+        this.generateRefreshToken({
+          sub: storedToken.userId,
+          email: storedToken.user.email,
+          family: storedToken.family,
+          sessionId: payload.sessionId,
+          jti,
+          type: 'refresh',
+        }),
+      ]);
 
-    return { accessToken, refreshToken, csrfToken };
+      // Store new refresh token
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+      await tx.refreshToken.create({
+        data: {
+          userId: storedToken.userId,
+          token: refreshToken,
+          family: storedToken.family,
+          ipAddress: ipAddress || storedToken.ipAddress || undefined,
+          userAgent: userAgent || storedToken.userAgent || undefined,
+          deviceInfo: storedToken.deviceInfo,
+          expiresAt,
+        },
+      });
+
+      return { accessToken, refreshToken, csrfToken };
+    });
   }
 
   async revokeToken(token: string) {

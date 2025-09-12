@@ -132,9 +132,12 @@ export class WorkflowExecutionService {
       if (result.status === 'completed') {
         if (result.nextNodeId) {
           const nextNodeIds = Array.isArray(result.nextNodeId) ? result.nextNodeId : [result.nextNodeId];
-          for (const nextId of nextNodeIds) {
-            await this.executeNode(nextId, nextId, context);
-          }
+          
+          // Paralel işleme için her node'u ayrı ayrı tetikle
+          const promises = nextNodeIds.map(nextId => 
+            this.executeNode(instanceId, nextId, context)
+          );
+          await Promise.all(promises);
         } else {
            const isEndNode = node.type === 'APPROVE' || node.type === 'REJECT';
            if(isEndNode) {
@@ -204,11 +207,16 @@ export class WorkflowExecutionService {
   private async executeApproval(node: any, instance: any): Promise<NodeExecutionResult> {
     let approverId = node.data?.approverId;
     if (node.type === WorkflowNodeType.DEPARTMENT_APPROVAL) {
-      const department = await this.prisma.department.findUnique({ where: { id: node.data?.departmentId } });
-      if (!department?.managerId) throw new Error(`Department or manager not found for ID: ${node.data?.departmentId}`);
+      if (!node.data?.departmentId) {
+        throw new Error(`Department ID not set for department approval node: ${node.nodeId}`);
+      }
+      const department = await this.prisma.department.findUnique({ where: { id: node.data.departmentId } });
+      if (!department?.managerId) throw new Error(`Department or manager not found for ID: ${node.data.departmentId}`);
       approverId = department.managerId;
     }
-    if (!approverId) throw new Error(`Approver not found for node: ${node.nodeId}`);
+    if (!approverId) {
+      throw new Error(`Approver not set for node: ${node.nodeId}. Please configure the approval node properly.`);
+    }
     
     await this.prisma.workflowApproval.create({
       data: {

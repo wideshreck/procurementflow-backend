@@ -33,8 +33,20 @@ export class CsrfGuard implements CanActivate {
     const headerToken = request.headers['x-csrf-token'] as string;
     const cookieToken = request.cookies['csrf-token'];
 
-    if (!headerToken || !cookieToken) {
+    // If no CSRF tokens are provided, check if this is an authenticated request
+    // For authenticated requests, CSRF protection is less critical
+    if (!headerToken && !cookieToken) {
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // This is an authenticated request with Bearer token, allow it
+        return true;
+      }
       throw new UnauthorizedException('CSRF token missing');
+    }
+
+    // If only one token is missing, fail
+    if (!headerToken || !cookieToken) {
+      throw new UnauthorizedException('CSRF token incomplete');
     }
 
     try {

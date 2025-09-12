@@ -12,6 +12,12 @@ export class WorkflowValidatorService {
     const errors: string[] = [];
     const { nodes, edges } = workflowDto;
 
+    // Rule 0: Must have at least one node
+    if (nodes.length === 0) {
+      errors.push('İş akışı en az bir node içermelidir.');
+      throw new Error(errors.join('\n'));
+    }
+
     // Rule 1: Must start with a PROCUREMENT_REQUEST node.
     const startNodes = nodes.filter(
       (n) => n.type === WorkflowNodeType.PROCUREMENT_REQUEST,
@@ -31,6 +37,13 @@ export class WorkflowValidatorService {
     if (endNodes.length === 0) {
       errors.push('İş akışı "Onayla" veya "Reddet" node\'u ile sonlanmalıdır.');
     }
+
+    // Rule 2.5: Check approval nodes have required configuration (warning only for creation, error for execution)
+    // We'll make this a warning instead of error during creation
+    // The execution service will handle the actual validation when workflow is run
+
+    // Rule 2.1: Check for unreachable end nodes
+    this.validateReachability(nodes, edges, errors);
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
     const edgesBySource = this.groupEdgesBy(edges, 'source');
@@ -194,6 +207,45 @@ export class WorkflowValidatorService {
     }
   }
 
+
+  private validateReachability(nodes: Node[], edges: WorkflowEdgeDto[], errors: string[]): void {
+    const startNodes = nodes.filter(n => n.type === WorkflowNodeType.PROCUREMENT_REQUEST);
+    if (startNodes.length === 0) return; // Already handled in main validation
+
+    const edgesBySource = this.groupEdgesBy(edges, 'source');
+    const visited = new Set<string>();
+    const queue = [...startNodes.map(n => n.id)];
+
+    // BFS to find all reachable nodes
+    while (queue.length > 0) {
+      const nodeId = queue.shift()!;
+      if (visited.has(nodeId)) continue;
+      
+      visited.add(nodeId);
+      const outgoingEdges = edgesBySource.get(nodeId) || [];
+      
+      for (const edge of outgoingEdges) {
+        if (!visited.has(edge.target)) {
+          queue.push(edge.target);
+        }
+      }
+    }
+
+    // Check for unreachable nodes
+    const unreachableNodes = nodes.filter(n => !visited.has(n.id));
+    for (const node of unreachableNodes) {
+      errors.push(`"${node.label || node.id}" node'una erişim yolu bulunmuyor.`);
+    }
+
+    // Check if all end nodes are reachable
+    const endNodes = nodes.filter(n => 
+      n.type === WorkflowNodeType.APPROVE || n.type === WorkflowNodeType.REJECT
+    );
+    const unreachableEndNodes = endNodes.filter(n => !visited.has(n.id));
+    for (const node of unreachableEndNodes) {
+      errors.push(`Sonlandırıcı node "${node.label || node.id}" erişilebilir değil.`);
+    }
+  }
 
   private groupEdgesBy(
     edges: WorkflowEdgeDto[],

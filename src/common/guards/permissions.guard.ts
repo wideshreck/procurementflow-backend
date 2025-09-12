@@ -34,7 +34,7 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('User role not found');
     }
 
-    const userPermissions = dbUser.customRole.permissions as string[];
+    const userPermissions = dbUser.customRole.permissions;
     const hasAllPermissions = requiredPermissions.every(permission =>
       userPermissions.includes(permission),
     );

@@ -14,8 +14,20 @@ export class SuppliersController {
   }
 
   @Get()
-  findAll() {
-    return this.suppliersService.findAll({});
+  findAll(@Request() req: any) {
+    const { search, status, supplierType, category, page = 1, limit = 10, sortBy = 'companyName', sortOrder = 'asc' } = req.query;
+    
+    return this.suppliersService.findAll({
+      search,
+      status,
+      supplierType,
+      category,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sortBy,
+      sortOrder,
+      companyId: req.user.companyId
+    });
   }
 
   @Get(':id')
@@ -39,5 +51,23 @@ export class SuppliersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.suppliersService.remove({ id });
+  }
+
+  @Post('bulk-delete')
+  bulkDelete(@Body() body: { ids: string[] }, @Request() req: any) {
+    return this.suppliersService.bulkDelete(body.ids, req.user.companyId);
+  }
+
+  @Get('export')
+  export(@Request() req: any) {
+    const { search, status, supplierType, category } = req.query;
+    
+    return this.suppliersService.export({
+      search,
+      status,
+      supplierType,
+      category,
+      companyId: req.user.companyId
+    });
   }
 }

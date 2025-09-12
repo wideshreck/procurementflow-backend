@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProcurementRequestDto } from './dto/create-procurement-request.dto';
 import type { User } from '@prisma/client';
 import { GeminiService } from './common/gemini/gemini.service';
+import { WorkflowExecutionService } from '../workflow/services/workflow-execution.service';
 
 @Injectable()
 export class ProcurementService {
@@ -11,6 +12,7 @@ export class ProcurementService {
   constructor(
     private prisma: PrismaService,
     private geminiService: GeminiService,
+    private workflowExecutionService: WorkflowExecutionService,
   ) {}
 
   async findAll() {
@@ -149,7 +151,7 @@ export class ProcurementService {
       }
     }
 
-    return this.prisma.procurementRequest.create({
+    const procurementRequest = await this.prisma.procurementRequest.create({
       data: {
         itemTitle: item_title,
         categoryId: categoryRecord.CategoryID,
@@ -181,6 +183,72 @@ export class ProcurementService {
         },
       },
     });
+
+    // Kullanıcının departmanına göre otomatik workflow tetikleme
+    await this.triggerWorkflowForDepartment(procurementRequest.id, user);
+
+    return procurementRequest;
+  }
+
+  /**
+   * Kullanıcının departmanına göre uygun workflow'u tetikler
+   */
+  private async triggerWorkflowForDepartment(procurementRequestId: string, user: User): Promise<void> {
+    try {
+      // Kullanıcının departmanını bul
+      let departmentId: string | null = null;
+      
+      if (user.department) {
+        // Eğer user'da department string olarak varsa, Department tablosundan ID'sini bul
+        const department = await this.prisma.department.findFirst({
+          where: {
+            name: user.department,
+            companyId: user.companyId,
+          },
+        });
+        departmentId = department?.id || null;
+      }
+      
+      // Departmana özgü aktif workflow'u bul
+      let workflow: any = null;
+      
+      if (departmentId) {
+        workflow = await this.prisma.workflow.findFirst({
+          where: {
+            departmentId: departmentId,
+            isActive: true,
+            companyId: user.companyId,
+          },
+          orderBy: {
+            createdAt: 'desc', // En son oluşturulan workflow'u al
+          },
+        });
+      }
+      
+      // Departmana özgü workflow bulunamazsa, genel workflow'u bul
+      if (!workflow) {
+        workflow = await this.prisma.workflow.findFirst({
+          where: {
+            departmentId: null, // Genel workflow (departman belirtilmemiş)
+            isActive: true,
+            companyId: user.companyId,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+      }
+      
+      if (workflow) {
+        this.logger.log(`Workflow tetikleniyor: ${workflow.name} (ID: ${workflow.id}) for PR: ${procurementRequestId}`);
+        await this.workflowExecutionService.startWorkflow(workflow.id, procurementRequestId);
+      } else {
+        this.logger.warn(`Kullanıcı ${user.email} için uygun workflow bulunamadı. Departman: ${user.department}, Şirket: ${user.companyId}`);
+      }
+    } catch (error) {
+      this.logger.error(`Workflow tetikleme hatası: ${error.message}`, error.stack);
+      // Workflow tetikleme hatası procurement request oluşturmasını engellemez
+    }
   }
 
   async estimatePrice(data: {

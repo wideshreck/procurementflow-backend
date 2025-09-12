@@ -163,15 +163,21 @@ export class AuthController {
     const ipAddress = req.ip;
     const userAgent = req.headers['user-agent'];
 
-    const result = await this.auth.refreshTokens(refreshToken, ipAddress, userAgent);
+    try {
+      const result = await this.auth.refreshTokens(refreshToken, ipAddress, userAgent);
 
-    // Update cookies
-    this.setAuthCookies(reply, result.tokens.refreshToken, result.tokens.csrfToken);
+      // Update cookies
+      this.setAuthCookies(reply, result.tokens.refreshToken, result.tokens.csrfToken);
 
-    return {
-      user: result.user as any, // Cast to any to bypass strict type check for response
-      tokens: result.tokens,
-    };
+      return {
+        user: result.user as any, // Cast to any to bypass strict type check for response
+        tokens: result.tokens,
+      };
+    } catch (error) {
+      // Clear cookies on refresh failure
+      this.clearAuthCookies(reply);
+      throw error;
+    }
   }
 
   @Public()
@@ -246,9 +252,12 @@ export class AuthController {
   @ApiOperation({ summary: 'Mevcut kullanıcı bilgilerini getir' })
   @ApiResponse({ status: 200, description: 'Kullanıcı bilgileri' })
   @ApiUnauthorizedResponse({ description: 'Token geçersiz veya eksik' })
-  me(@CurrentUser() user: User) {
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+  async me(@CurrentUser() user: User) {
+    const fullUser = await this.auth.users.getPublicUserById(user.id);
+    if (!fullUser) {
+      throw new UnauthorizedException('User not found');
+    }
+    return fullUser;
   }
 
   // ===== SESSION MANAGEMENT =====
@@ -315,7 +324,7 @@ export class AuthController {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/api/auth',
+      path: '/',
     });
 
     reply.setCookie(AUTH_CONSTANTS.CSRF_TOKEN_COOKIE, csrfToken, {
@@ -328,7 +337,7 @@ export class AuthController {
   }
 
   private clearAuthCookies(reply: FastifyReply) {
-    reply.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, { path: '/api/auth' });
+    reply.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, { path: '/' });
     reply.clearCookie(AUTH_CONSTANTS.CSRF_TOKEN_COOKIE, { path: '/' });
   }
 }

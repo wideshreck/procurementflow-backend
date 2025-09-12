@@ -80,9 +80,16 @@ export class SessionService {
       return false;
     }
 
+    const now = new Date();
+
     // Check if session is expired
-    if (session.expiresAt < new Date()) {
-      await (this.prisma as any).session.delete({ where: { id: session.id } });
+    if (session.expiresAt < now) {
+      // Silently delete expired session
+      try {
+        await (this.prisma as any).session.delete({ where: { id: session.id } });
+      } catch (error) {
+        // Ignore delete errors (session might already be deleted)
+      }
       return false;
     }
 
@@ -91,14 +98,24 @@ export class SessionService {
       return false;
     }
 
-    // Update last used timestamp
-    await (this.prisma as any).session.update({
-      where: { id: session.id },
-      data: {
-        lastUsedAt: new Date(),
-        expiresAt: new Date(Date.now() + AUTH_CONSTANTS.SESSION_IDLE_TIMEOUT),
-      },
-    });
+    // Update last used timestamp only if more than 1 minute has passed
+    // This prevents too frequent database updates
+    const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
+    if (session.lastUsedAt < oneMinuteAgo) {
+      try {
+        await (this.prisma as any).session.update({
+          where: { id: session.id },
+          data: {
+            lastUsedAt: now,
+            expiresAt: new Date(now.getTime() + AUTH_CONSTANTS.SESSION_IDLE_TIMEOUT),
+          },
+        });
+      } catch (error) {
+        // If update fails, session might be deleted by another process
+        // Just return false to be safe
+        return false;
+      }
+    }
 
     return true;
   }

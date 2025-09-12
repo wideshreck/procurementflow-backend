@@ -68,14 +68,14 @@ const ParallelJoinNodeSchema = BaseNodeSchema.extend({
 const PersonApprovalNodeSchema = BaseNodeSchema.extend({
   type: z.literal(WorkflowNodeType.PERSON_APPROVAL),
   data: z.object({
-    approverId: z.string().cuid('Invalid user ID format'),
+    approverId: z.string().cuid('Invalid user ID format').optional(),
   }),
 });
 
 const DepartmentApprovalNodeSchema = BaseNodeSchema.extend({
   type: z.literal(WorkflowNodeType.DEPARTMENT_APPROVAL),
   data: z.object({
-    departmentId: z.string().cuid('Invalid department ID format'),
+    departmentId: z.string().cuid('Invalid department ID format').optional(),
   }),
 });
 

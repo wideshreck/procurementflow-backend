@@ -1,37 +1,18 @@
 import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
-import * as readline from 'readline';
 
 const prisma = new PrismaClient();
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
 
 async function main() {
   console.log('Creating a new admin user...');
 
-  const email = await new Promise<string>((resolve) => {
-    rl.question('Enter admin email: ', (answer) => resolve(answer));
-  });
-
-  const password = await new Promise<string>((resolve) => {
-    rl.question('Enter admin password: ', (answer) => resolve(answer));
-  });
-
-  const fullName = await new Promise<string>((resolve) => {
-    rl.question('Enter admin full name: ', (answer) => resolve(answer));
-  });
-
-  const companyName = await new Promise<string>((resolve) => {
-    rl.question('Enter company name: ', (answer) => resolve(answer));
-  });
-
-  rl.close();
+  const email = process.argv[2];
+  const password = process.argv[3];
+  const fullName = process.argv[4];
+  const companyName = process.argv[5];
 
   if (!email || !password || !fullName || !companyName) {
-    console.error('Email, password, full name, and company name are required.');
+    console.error('Usage: ts-node create-admin.ts <email> <password> <fullName> <companyName>');
     return;
   }
 
@@ -59,36 +40,16 @@ async function main() {
   });
 
   const adminPermissions = [
-    'requests:create',
-    'requests:list',
-    'requests:debug',
-    'cost-centers:list',
+    'requests:create', 'requests:list', 'requests:debug',
+    'cost-centers:list', 'cost-centers:create', 'cost-centers:update', 'cost-centers:delete',
     'approval-processes:edit',
-    'categories:edit',
-    'categories:read',
+    'categories:edit', 'categories:read', 'categories:create', 'categories:update', 'categories:delete',
     'auth:debug',
-    'suppliers:list',
-    'custom-roles:list',
-    'users:list',
-    'users:read',
-    'users:create',
-    'users:update',
-    'users:delete',
-    'users:update-role',
-    'categories:create',
-    'categories:update',
-    'categories:delete',
-    'cost-centers:create',
-    'cost-centers:update',
-    'cost-centers:delete',
-    'departments:read',
-    'departments:create',
-    'departments:update',
-    'departments:delete',
-    'locations:create',
-    'locations:update',
-    'locations:delete',
-    'locations:read',
+    'suppliers:list', 'suppliers:create', 'suppliers:update', 'suppliers:delete',
+    'custom-roles:list', 'custom-roles:create', 'custom-roles:update', 'custom-roles:delete',
+    'users:list', 'users:read', 'users:create', 'users:update', 'users:delete', 'users:update-role',
+    'departments:read', 'departments:create', 'departments:update', 'departments:delete',
+    'locations:create', 'locations:update', 'locations:delete', 'locations:read',
   ];
 
   let adminRole = await prisma.customRole.findFirst({

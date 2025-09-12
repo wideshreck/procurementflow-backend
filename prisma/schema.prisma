@@ -834,7 +834,7 @@ model CustomRole {
   name        String
   description String?
   color       String?
-  permissions Json
+  permissions String[]
   companyId   String
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   users       User[]
